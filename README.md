@@ -89,15 +89,40 @@ All commits in this repository follow the [Conventional Commits](https://www.con
 
 ## 🗺️ Product Roadmap
 
-- [x] **Phase 1: Project Foundation & Architecture Standards** *(Active)*
+- [x] **Phase 1: Project Foundation & Architecture Standards** *(Completed)*
   - Monorepo repository setup & git remote connection
   - Baseline git discipline (`.gitignore`, commit rules)
   - Core architectural documentation (ADR-001)
-- [ ] **Phase 2: Core Domain Models & Architecture Baseline** *(Pending)*
-- [ ] **Phase 3: Pedagogical Engine & Service Layer** *(Pending)*
-- [ ] **Phase 4: API & Integration Interfaces** *(Pending)*
-- [ ] **Phase 5: Real-time Streaming & WebSocket Infrastructure** *(Pending)*
-- [ ] **Phase 6: Deployment, Observability & CI/CD** *(Pending)*
+- [x] **Phase 2: Frontend Foundation & Application Shell** *(Completed)*
+  - React + TypeScript + Vite setup with `@/*` path resolution
+  - Theme architecture (CSS variables, ThemeContext, ThemeToggle)
+  - Layout & App Shell (`AppShell`, `Header`, `Footer`, `Container`)
+  - Environment configuration contract (`.env.example`, `env.ts`, `vite-env.d.ts`)
+  - Router foundation (`react-router-dom` v7 integration)
+  - Core UI primitive foundation (`Button`, `Card`, `Container`)
+- [ ] **Phase 3: Core Domain Models & Architecture Baseline** *(Pending)*
+- [ ] **Phase 4: Pedagogical Engine & Service Layer** *(Pending)*
+- [ ] **Phase 5: API & Integration Interfaces** *(Pending)*
+- [ ] **Phase 6: Real-time Streaming & WebSocket Infrastructure** *(Pending)*
+- [ ] **Phase 7: Deployment, Observability & CI/CD** *(Pending)*
+
+---
+
+## 🚀 Local Development Setup
+
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Start Vite development server
+npm run dev
+
+# 3. Build for production (type-check & bundle)
+npm run build
+
+# 4. Run static linter
+npx oxlint
+```
 
 ---
 
