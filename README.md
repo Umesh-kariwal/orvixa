@@ -51,18 +51,16 @@ Orvixa is built from first principles as a production-grade, enterprise-ready Sa
 - **Why Selected**: Native integration with the Python AI ecosystem (Google AI SDK, LangChain, LlamaIndex, NumPy, PyTorch), built-in async/await performance, auto-generated OpenAPI documentation, and strict runtime type validation with Pydantic.
 - **Why Alternatives Were Rejected**: Node.js requires external wrappers or subprocess bridges for advanced LLM/ML data processing pipelines.
 
----
-
-### ADR-003: Cloud SQL (PostgreSQL) vs Firestore for Primary Relational Data
+### ADR-003: Relational Persistence Strategy & $0 Cost Infrastructure Policy
 
 - **Status**: Decided
-- **Context / Problem**: Selecting the primary persistence engine for transactional student data, assessment attempt histories, diagnostic analytics, and multi-tenant metadata.
+- **Context / Problem**: Selecting the primary persistence strategy for transactional student data, assessment attempt histories, diagnostic analytics, and multi-tenant metadata while adhering to a strict **$0 current infrastructure budget**.
 - **Available Options**:
-  1. **Cloud SQL (PostgreSQL)**: Fully managed relational database engine.
-  2. **Firebase Firestore**: Serverless NoSQL document database.
-- **Selected Option**: **Cloud SQL (PostgreSQL)**.
-- **Why Selected**: Guarantees ACID compliance for financial/attempt transactions, supports rich JSONB queries for semi-structured payloads, offers `pgvector` for future vector search/RAG indexing, and enforces relational integrity.
-- **Why Alternatives Were Rejected**: Firestore lacks native join capabilities, multi-document ACID guarantees, and complex diagnostic analytics querying required for pedagogical insights.
+  1. **Local / Serverless PostgreSQL / SQLite (Zero Cost - Current Baseline)**: Run local PostgreSQL or file-backed SQLite in development/testing without incurring cloud instance charges.
+  2. **Managed Cloud SQL (PostgreSQL)**: Fully managed cloud database instance.
+- **Selected Option**: **Relational Abstraction (PostgreSQL-compatible) with $0 Initial Infrastructure**.
+- **Why Selected**: Ensures zero monthly hosting cost during early development phases while maintaining full SQL/ACID compatibility. Cloud SQL is preserved as a future production scaling option when user traffic justifies managed cloud infrastructure.
+- **Why Alternatives Were Rejected**: Permanently coupling early development to paid cloud services (e.g. minimum Cloud SQL instances) introduces unnecessary fixed costs before product-market fit.
 
 ---
 
@@ -174,18 +172,27 @@ All commits in this repository follow the [Conventional Commits](https://www.con
   - GCP Secret Manager & GitHub Secrets configuration contract
   - GitHub Actions CI workflow pipeline (`.github/workflows/ci.yml`)
   - Architecture Decision Records (ADR-002, ADR-003, ADR-004)
-- [ ] **Phase 4: Core Domain Models & Architecture Baseline** *(Pending)*
-- [ ] **Phase 5: Pedagogical Engine & Service Layer** *(Pending)*
-- [ ] **Phase 6: API & Integration Interfaces** *(Pending)*
-- [ ] **Phase 7: Real-time Streaming & WebSocket Infrastructure** *(Pending)*
-- [ ] **Phase 8: Deployment, Observability & CI/CD** *(Pending)*
+- [x] **Phase 4: Backend Foundation** *(Completed)*
+  - FastAPI application structure (`backend/app/main.py`)
+  - Pydantic Settings configuration contract (`backend/app/core/config.py`)
+  - Structured JSON logging setup (`backend/app/core/logging.py`)
+  - Global exception handlers for HTTP, Validation & 500 Server Errors (`backend/app/core/errors.py`)
+  - API v1 router namespace and health endpoint controller (`GET /api/v1/health`)
+  - Dependency injection structure (`backend/app/api/deps.py`)
+  - Application lifespan context manager and CORS middleware
+- [ ] **Phase 5: Core Domain Models & Architecture Baseline** *(Pending)*
+- [ ] **Phase 6: Pedagogical Engine & Service Layer** *(Pending)*
+- [ ] **Phase 7: API & Integration Interfaces** *(Pending)*
+- [ ] **Phase 8: Real-time Streaming & WebSocket Infrastructure** *(Pending)*
+- [ ] **Phase 9: Deployment, Observability & CI/CD** *(Pending)*
 
 ---
 
 ## 🚀 Local Development Setup
 
+### Frontend (React + Vite)
 ```bash
-# 1. Install dependencies
+# 1. Install frontend dependencies
 npm install
 
 # 2. Start Vite development server
@@ -196,6 +203,25 @@ npm run build
 
 # 4. Run static linter
 npx oxlint
+```
+
+### Backend (FastAPI)
+```bash
+# 1. Navigate to backend directory
+cd backend
+
+# 2. Create and activate Python virtual environment
+python -m venv venv
+# On Windows:
+.\venv\Scripts\activate
+# On Linux/macOS:
+source venv/bin/activate
+
+# 3. Install backend dependencies
+pip install -r requirements.txt
+
+# 4. Start FastAPI server with live reload
+uvicorn app.main:app --reload --port 8000
 ```
 
 ---
