@@ -227,8 +227,16 @@ All commits in this repository follow the [Conventional Commits](https://www.con
   - OpenAPI interactive documentation (`/api/v1/docs` & `/api/v1/openapi.json`)
   - Dependency Injection integration (`Depends(get_diagnose_use_case)`)
   - Standardized JSON error response payloads for 404, 422, and 500 status codes
-- [ ] **Phase 10: Real-time Streaming & WebSocket Infrastructure** *(Pending)*
-- [ ] **Phase 11: Deployment, Observability & CI/CD** *(Pending)*
+- [x] **Phase 10: Frontend Integration Foundation** *(Completed)*
+  - Typed API client layer (`src/api/client.ts`) utilizing `env.apiBaseUrl`
+  - Copilot API request/response TypeScript interfaces (`src/types/copilot.ts`)
+  - Service abstraction layer (`src/services/copilotService.ts`)
+  - Copilot diagnostic form component (`src/components/copilot/CopilotForm.tsx`)
+  - Response rendering component (`src/components/copilot/CopilotResponseView.tsx`)
+  - Copilot view orchestrator with loading state, error banner, and live API binding (`src/views/CopilotHomeView.tsx`)
+  - First end-to-end flow: Frontend -> API -> UseCase -> AI Stub -> Response UI
+- [ ] **Phase 11: Real-time Streaming & WebSocket Infrastructure** *(Pending)*
+- [ ] **Phase 12: Deployment, Observability & CI/CD** *(Pending)*
 
 ---
 
