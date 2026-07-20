@@ -235,8 +235,15 @@ All commits in this repository follow the [Conventional Commits](https://www.con
   - Response rendering component (`src/components/copilot/CopilotResponseView.tsx`)
   - Copilot view orchestrator with loading state, error banner, and live API binding (`src/views/CopilotHomeView.tsx`)
   - First end-to-end flow: Frontend -> API -> UseCase -> AI Stub -> Response UI
-- [ ] **Phase 11: Real-time Streaming & WebSocket Infrastructure** *(Pending)*
-- [ ] **Phase 12: Deployment, Observability & CI/CD** *(Pending)*
+- [x] **Phase 11: Real Google Gemini Integration** *(Completed)*
+  - Production `GoogleGeminiAdapter` (`backend/app/infrastructure/ai/gemini_adapter.py`) using official `google-genai` SDK
+  - Environment variable API key resolution (`GEMINI_API_KEY`, `AI_GEMINI_API_KEY`, `GOOGLE_API_KEY`)
+  - Asynchronous execution with configurable timeout handling (`REQUEST_TIMEOUT_SECONDS`)
+  - Token usage extraction metrics (`TokenUsage`)
+  - Exception mapping strategy (`AIProviderException`, `AIRateLimitException`)
+  - Zero vendor leakage outside Infrastructure layer & graceful local stub fallback
+- [ ] **Phase 12: Real-time Streaming & WebSocket Infrastructure** *(Pending)*
+- [ ] **Phase 13: Deployment, Observability & CI/CD** *(Pending)*
 
 ---
 
