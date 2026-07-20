@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "default": "orvixa-dev",
+    "staging": "orvixa-staging",
+    "production": "orvixa-prod"
+  }
+}

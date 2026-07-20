@@ -36,7 +36,75 @@ Orvixa is built from first principles as a production-grade, enterprise-ready Sa
 - **Selected Option**: **Monorepo Strategy**.
 - **Why Selected**: For a lean, founding team scaling a cloud-native SaaS product from scratch, a monorepo eliminates coordination friction, simplifies refactoring, keeps documentation synchronized with implementation, and ensures atomic commits across system boundaries.
 - **Why Alternatives Were Rejected**: Multi-repo introduces artificial organizational friction, fragmented issue tracking, and synchronization overhead at an early stage where architectural agility is crucial.
-- **Future Impact**: Folder responsibilities will be enforced strictly using modular domain boundaries (e.g., `apps/`, `packages/`, `docs/`) to prevent code coupling.
+- **Future Impact**: Folder responsibilities will be enforced strictly using modular domain boundaries to prevent code coupling.
+
+---
+
+### ADR-002: FastAPI vs Node.js for Core AI Reasoning Backend
+
+- **Status**: Decided
+- **Context / Problem**: Orvixa requires a high-performance backend framework to orchestrate AI reasoning pipelines, interface with LLMs (Google Gemini), process student analytics, and manage WebSocket streams.
+- **Available Options**:
+  1. **FastAPI (Python)**: Modern, asynchronous Python web framework built on Starlette & Pydantic.
+  2. **Node.js (TypeScript / Express / NestJS)**: Event-driven JavaScript runtime environment.
+- **Selected Option**: **FastAPI (Python)**.
+- **Why Selected**: Native integration with the Python AI ecosystem (Google AI SDK, LangChain, LlamaIndex, NumPy, PyTorch), built-in async/await performance, auto-generated OpenAPI documentation, and strict runtime type validation with Pydantic.
+- **Why Alternatives Were Rejected**: Node.js requires external wrappers or subprocess bridges for advanced LLM/ML data processing pipelines.
+
+---
+
+### ADR-003: Cloud SQL (PostgreSQL) vs Firestore for Primary Relational Data
+
+- **Status**: Decided
+- **Context / Problem**: Selecting the primary persistence engine for transactional student data, assessment attempt histories, diagnostic analytics, and multi-tenant metadata.
+- **Available Options**:
+  1. **Cloud SQL (PostgreSQL)**: Fully managed relational database engine.
+  2. **Firebase Firestore**: Serverless NoSQL document database.
+- **Selected Option**: **Cloud SQL (PostgreSQL)**.
+- **Why Selected**: Guarantees ACID compliance for financial/attempt transactions, supports rich JSONB queries for semi-structured payloads, offers `pgvector` for future vector search/RAG indexing, and enforces relational integrity.
+- **Why Alternatives Were Rejected**: Firestore lacks native join capabilities, multi-document ACID guarantees, and complex diagnostic analytics querying required for pedagogical insights.
+
+---
+
+### ADR-004: Firebase Hosting + Cloud Run Deployment Topology
+
+- **Status**: Decided
+- **Context / Problem**: Determining the serverless hosting topology for Orvixa's static frontend SPA and dynamic backend compute services.
+- **Available Options**:
+  1. **Firebase Hosting (Frontend) + GCP Cloud Run (Backend)**: Global CDN for React static assets combined with auto-scaling containerized microservices for FastAPI.
+  2. **Monolithic Compute Virtual Machine (Compute Engine / EC2)**: Single VM instance running all frontend and backend processes.
+- **Selected Option**: **Firebase Hosting + Cloud Run**.
+- **Why Selected**: Zero maintenance overhead, sub-second global static asset distribution via Firebase CDN, and pay-per-use scaling to zero on Cloud Run, ensuring minimal infrastructure costs while guaranteeing high availability during traffic spikes.
+- **Why Alternatives Were Rejected**: Monolithic VMs require manual OS patching, manual auto-scaling group management, and fixed hourly costs regardless of traffic.
+
+---
+
+## ☁️ Cloud Platform Architecture & Environment Strategy
+
+```
+                          [ Client Request ]
+                                  │
+                  ┌───────────────┴───────────────┐
+                  ▼                               ▼
+       [ Firebase Hosting CDN ]       [ GCP Cloud Run (FastAPI) ]
+       - Global Static Edge           - Containerized AI Engine
+       - SPA Route Rewrites           - Serverless Auto-Scaling
+                                                  │
+                                  ┌───────────────┴───────────────┐
+                                  ▼                               ▼
+                        [ Cloud SQL (Postgres) ]       [ Google AI Gemini API ]
+                        - Transactional DB             - Pedagogical LLM Core
+```
+
+### Environment Isolation Strategy
+- **Development (`orvixa-dev`)**: Local execution using `.env.local` pointing to local/sandbox GCP services.
+- **Staging (`orvixa-staging`)**: Pre-release verification triggered automatically via GitHub Actions CI/CD on pull requests.
+- **Production (`orvixa-prod`)**: Live customer environment managed via strictly audited release workflows.
+
+### Secrets Management Strategy
+- **Zero Raw Credentials in Git**: All sensitive credentials (DB passwords, API keys, JWT secrets) are excluded via `.gitignore`.
+- **GCP Secret Manager**: Server-side secrets are bound directly to Cloud Run service environment variables at deployment time.
+- **Client Configuration**: Firebase web configuration variables are injected at build time via GitHub Secrets.
 
 ---
 
@@ -100,11 +168,17 @@ All commits in this repository follow the [Conventional Commits](https://www.con
   - Environment configuration contract (`.env.example`, `env.ts`, `vite-env.d.ts`)
   - Router foundation (`react-router-dom` v7 integration)
   - Core UI primitive foundation (`Button`, `Card`, `Container`)
-- [ ] **Phase 3: Core Domain Models & Architecture Baseline** *(Pending)*
-- [ ] **Phase 4: Pedagogical Engine & Service Layer** *(Pending)*
-- [ ] **Phase 5: API & Integration Interfaces** *(Pending)*
-- [ ] **Phase 6: Real-time Streaming & WebSocket Infrastructure** *(Pending)*
-- [ ] **Phase 7: Deployment, Observability & CI/CD** *(Pending)*
+- [x] **Phase 3: Cloud Platform Foundation** *(Completed)*
+  - Firebase Hosting setup (`firebase.json`, `.firebaserc` SPA target)
+  - Multi-environment isolation strategy (`development`, `staging`, `production`)
+  - GCP Secret Manager & GitHub Secrets configuration contract
+  - GitHub Actions CI workflow pipeline (`.github/workflows/ci.yml`)
+  - Architecture Decision Records (ADR-002, ADR-003, ADR-004)
+- [ ] **Phase 4: Core Domain Models & Architecture Baseline** *(Pending)*
+- [ ] **Phase 5: Pedagogical Engine & Service Layer** *(Pending)*
+- [ ] **Phase 6: API & Integration Interfaces** *(Pending)*
+- [ ] **Phase 7: Real-time Streaming & WebSocket Infrastructure** *(Pending)*
+- [ ] **Phase 8: Deployment, Observability & CI/CD** *(Pending)*
 
 ---
 

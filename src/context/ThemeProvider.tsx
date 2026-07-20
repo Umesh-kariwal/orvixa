@@ -1,14 +1,5 @@
-import React, { createContext, useEffect, useState } from 'react';
-
-type Theme = 'light' | 'dark' | 'system';
-
-export interface ThemeContextType {
-  theme: Theme;
-  effectiveTheme: 'light' | 'dark';
-  setTheme: (theme: Theme) => void;
-}
-
-export const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+import React, { useEffect, useState } from 'react';
+import { ThemeContext, type Theme } from './ThemeContext';
 
 const STORAGE_KEY = 'orvixa_theme_preference';
 
@@ -27,7 +18,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const applyTheme = () => {
       const active =
         theme === 'system' ? (mediaQuery.matches ? 'dark' : 'light') : theme;
-      
+
       root.setAttribute('data-theme', active);
       setEffectiveTheme(active);
     };
