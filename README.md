@@ -221,7 +221,12 @@ All commits in this repository follow the [Conventional Commits](https://www.con
   - Pedagogical orchestrator use case (`DiagnoseAttemptUseCase`)
   - Dependency Injection container wiring (`backend/app/api/deps.py`)
   - Zero-credential local stub execution strategy
-- [ ] **Phase 9: API Controllers & Frontend Integration** *(Pending)*
+- [x] **Phase 9: API Layer Foundation** *(Completed)*
+  - Thin REST controller `POST /api/v1/copilot/diagnose` (`backend/app/api/v1/copilot.py`)
+  - Request and response validation schemas (`DiagnoseAttemptRequest`, `DiagnoseAttemptResponse`)
+  - OpenAPI interactive documentation (`/api/v1/docs` & `/api/v1/openapi.json`)
+  - Dependency Injection integration (`Depends(get_diagnose_use_case)`)
+  - Standardized JSON error response payloads for 404, 422, and 500 status codes
 - [ ] **Phase 10: Real-time Streaming & WebSocket Infrastructure** *(Pending)*
 - [ ] **Phase 11: Deployment, Observability & CI/CD** *(Pending)*
 
