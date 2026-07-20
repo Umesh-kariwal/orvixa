@@ -77,6 +77,19 @@ Orvixa is built from first principles as a production-grade, enterprise-ready Sa
 
 ---
 
+### ADR-005: Provider-Agnostic AI Layer & Dependency Inversion Strategy
+
+- **Status**: Decided
+- **Context / Problem**: Directly coupling application code to vendor-specific LLM SDKs (e.g., Google Gemini, OpenAI) creates tight coupling, vendor lock-in, testing friction, and architectural fragility.
+- **Available Options**:
+  1. **Direct SDK Coupling**: Importing vendor SDKs directly into feature controllers/services.
+  2. **Provider-Agnostic Abstraction Layer**: Defining abstract ports (`BaseLLMProvider`), standardized request/response models (`AIRequest`, `AIResponse`), a `ProviderRegistry`, and file-based `PromptLoader`.
+- **Selected Option**: **Provider-Agnostic Abstraction Layer**.
+- **Why Selected**: Strictly adheres to the Dependency Inversion Principle (DIP) and Clean Architecture. Application logic depends exclusively on abstract contracts, making LLM providers pluggable adapters without modifying core application code.
+- **Why Alternatives Were Rejected**: Direct SDK coupling leaks provider-specific parameter structures throughout the codebase, making LLM migrations complex and risky.
+
+---
+
 ## ☁️ Cloud Platform Architecture & Environment Strategy
 
 ```
@@ -180,11 +193,19 @@ All commits in this repository follow the [Conventional Commits](https://www.con
   - API v1 router namespace and health endpoint controller (`GET /api/v1/health`)
   - Dependency injection structure (`backend/app/api/deps.py`)
   - Application lifespan context manager and CORS middleware
-- [ ] **Phase 5: Core Domain Models & Architecture Baseline** *(Pending)*
-- [ ] **Phase 6: Pedagogical Engine & Service Layer** *(Pending)*
-- [ ] **Phase 7: API & Integration Interfaces** *(Pending)*
-- [ ] **Phase 8: Real-time Streaming & WebSocket Infrastructure** *(Pending)*
-- [ ] **Phase 9: Deployment, Observability & CI/CD** *(Pending)*
+- [x] **Phase 5: AI Core Architecture** *(Completed)*
+  - Abstract provider interface `BaseLLMProvider` (`backend/app/core/ai/interfaces.py`)
+  - Provider-agnostic request/response and streaming chunk models (`backend/app/core/ai/models.py`)
+  - Token consumption tracking schemas (`TokenUsage`)
+  - Dynamic provider registry architecture (`backend/app/core/ai/registry.py`)
+  - File-based prompt loader & template storage conventions (`backend/app/core/ai/prompts.py`)
+  - Granular AI exception hierarchy (`backend/app/core/ai/exceptions.py`)
+  - Architecture Decision Record (ADR-005)
+- [ ] **Phase 6: Core Domain Models & Architecture Baseline** *(Pending)*
+- [ ] **Phase 7: Pedagogical Engine & Service Layer** *(Pending)*
+- [ ] **Phase 8: API & Integration Interfaces** *(Pending)*
+- [ ] **Phase 9: Real-time Streaming & WebSocket Infrastructure** *(Pending)*
+- [ ] **Phase 10: Deployment, Observability & CI/CD** *(Pending)*
 
 ---
 
