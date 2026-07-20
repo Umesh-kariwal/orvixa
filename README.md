@@ -215,8 +215,13 @@ All commits in this repository follow the [Conventional Commits](https://www.con
   - DTO-to-Domain mapping strategy (`AttemptMapper`)
   - Application exception hierarchy (`ApplicationException`, `UseCaseExecutionException`)
   - Strict separation of orchestration from domain business rules
-- [ ] **Phase 8: Pedagogical Engine & Concrete Service Adapters** *(Pending)*
-- [ ] **Phase 9: API & Integration Interfaces** *(Pending)*
+- [x] **Phase 8: Pedagogical Engine & AI Adapter Foundation** *(Completed)*
+  - Google Gemini adapter stub (`GoogleGeminiAdapter` implementing `BaseLLMProvider`)
+  - AI Engine adapter (`AIEngineAdapter` implementing `AIEnginePort`)
+  - Pedagogical orchestrator use case (`DiagnoseAttemptUseCase`)
+  - Dependency Injection container wiring (`backend/app/api/deps.py`)
+  - Zero-credential local stub execution strategy
+- [ ] **Phase 9: API Controllers & Frontend Integration** *(Pending)*
 - [ ] **Phase 10: Real-time Streaming & WebSocket Infrastructure** *(Pending)*
 - [ ] **Phase 11: Deployment, Observability & CI/CD** *(Pending)*
 

@@ -6,7 +6,7 @@ from app.application.exceptions import (
 )
 from app.application.mappers import AttemptMapper
 from app.application.ports import AIEnginePort
-from app.application.use_cases import BaseUseCase
+from app.application.use_cases import BaseUseCase, DiagnoseAttemptUseCase
 
 __all__ = [
     "ApplicationException",
@@ -17,4 +17,5 @@ __all__ = [
     "AIEnginePort",
     "AttemptMapper",
     "BaseUseCase",
+    "DiagnoseAttemptUseCase",
 ]
