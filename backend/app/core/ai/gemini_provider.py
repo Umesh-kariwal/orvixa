@@ -9,6 +9,7 @@ from app.core.ai.base_provider import (
     ProviderMetrics,
     StreamChunk,
 )
+from app.core.learning.intent_detector import IntentDetector
 from app.core.config import settings
 
 
@@ -16,6 +17,7 @@ class GoogleGeminiProvider(BaseAIProvider):
     """Production Google Gemini Provider implementing BaseAIProvider.
 
     Uses official `google-genai` SDK for streaming.
+    Provides intent-driven pedagogical streaming of adaptive learning cards.
     Falls back gracefully to local stub stream if GEMINI_API_KEY is unconfigured.
     """
 
@@ -60,13 +62,15 @@ class GoogleGeminiProvider(BaseAIProvider):
         first_token_time: Optional[float] = None
         tokens_emitted = 0
 
-        # Build prompt
+        # Detect Pedagogical Intent
+        learning_intent = IntentDetector.detect_intent(prompt_text or intent_type)
+
         system_instruction = (
-            "You are Orvixa Intelligence Layer. Obey Product Constitution V2. "
-            "Return surgical, concise diagnostic guidance in typed intent structure."
+            f"You are Orvixa Universal AI Learning Copilot. Intent Mode: {learning_intent.intent_mode}, Domain: {learning_intent.domain}. "
+            "Return surgical, structured adaptive learning guidance."
         )
 
-        full_prompt = f"{system_instruction}\nContext: {context_payload}\nIntent: {intent_type}\nUser Prompt: {prompt_text}"
+        full_prompt = f"{system_instruction}\nContext: {context_payload}\nPrompt: {prompt_text}"
 
         if self._client:
             try:
@@ -88,9 +92,8 @@ class GoogleGeminiProvider(BaseAIProvider):
                         token_text=token_text,
                         is_final=False,
                     )
-                    await asyncio.sleep(0.01) # Yield control
+                    await asyncio.sleep(0.01)
             except Exception as err:
-                # Fallback to local stub on API error
                 yield StreamChunk(
                     chunk_id=str(uuid.uuid4()),
                     context_id=context_id,
@@ -98,16 +101,41 @@ class GoogleGeminiProvider(BaseAIProvider):
                     token_text=f"[Gemini Provider Exception: {str(err)}. Fallback active.] ",
                     is_final=False,
                 )
-
         else:
-            # Fallback Local Stub Stream for offline development
-            sample_tokens = [
-                f"Analyzing {intent_type} context... ",
-                "Identified key logic pattern. ",
-                "Step 1: Check array boundary before loop entry. ",
-                "Step 2: Apply guarded null check. ",
-                "Diagnostic complete.",
-            ]
+            # Fallback Intent-Driven Pedagogical Learning Stream
+            if learning_intent.intent_mode in ["Explain", "Teach"]:
+                sample_tokens = [
+                    f"✦ **Learning Intent Detected**: {learning_intent.intent_mode} ({learning_intent.domain.capitalize()})\n\n",
+                    "### 📘 Concept: Binary Search Algorithm\n",
+                    "Binary Search is an efficient O(log N) search algorithm that repeatedly divides a sorted array in half to find a target value.\n\n",
+                    "```python\n",
+                    "def binary_search(arr, target):\n",
+                    "    left, right = 0, len(arr) - 1\n",
+                    "    while left <= right:\n",
+                    "        mid = (left + right) // 2\n",
+                    "        if arr[mid] == target:\n",
+                    "            return mid\n",
+                    "        elif arr[mid] < target:\n",
+                    "            left = mid + 1\n",
+                    "        else:\n",
+                    "            right = mid - 1\n",
+                    "    return -1\n",
+                    "```\n\n",
+                    "### ⚠️ Common Mistakes\n",
+                    "• Forgetting that the array MUST be sorted before binary search.\n",
+                    "• Integer overflow when computing `mid = (left + right) // 2` in languages like C++/Java.",
+                ]
+            elif learning_intent.intent_mode == "Hint":
+                sample_tokens = [
+                    f"✦ **Socratic Hint Ladder** (Intent: {learning_intent.intent_mode})\n\n",
+                    "• **Hint 1**: Which direction should you adjust `left` or `right` pointers when `arr[mid] < target`?\n",
+                    "• **Hint 2**: Remember that `mid` calculation uses integer division `//`.",
+                ]
+            else:
+                sample_tokens = [
+                    f"✦ **Learning Analysis** (Intent: {learning_intent.intent_mode})\n\n",
+                    f"Provided surgical breakdown for '{prompt_text or 'learning topic'}'.",
+                ]
 
             for tok in sample_tokens:
                 if first_token_time is None:
@@ -121,7 +149,7 @@ class GoogleGeminiProvider(BaseAIProvider):
                     token_text=tok,
                     is_final=False,
                 )
-                await asyncio.sleep(0.08)
+                await asyncio.sleep(0.06)
 
         total_duration = (time.time() - start_time) * 1000
         ttft = ((first_token_time or time.time()) - start_time) * 1000

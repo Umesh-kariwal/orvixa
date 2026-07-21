@@ -1,46 +1,32 @@
 import React from 'react';
 import { useSidePanel } from '@/hooks/useSidePanel';
 import { Button } from '@/components/ui/Button';
-import { Code, Bug, GitCommit, FileText, HelpCircle, Activity, Sparkles } from 'lucide-react';
+import { BookOpen, HelpCircle, GraduationCap, Target, Users, Sparkles } from 'lucide-react';
 import type { RecommendedAction } from '@/types/context';
 
 export const ActionPillsRow: React.FC = () => {
-  const { activeContext, executeAction, selectedAction, panelState } = useSidePanel();
+  const { executeAction, selectedAction, panelState } = useSidePanel();
 
-  const isGitHub = activeContext?.primary_intent?.toLowerCase().includes('github') ||
-                   activeContext?.sanitized_summary?.toLowerCase().includes('github');
-
-  const githubActions: RecommendedAction[] = [
-    { action_id: 'explain_code', label: 'Explain Code', description: 'Explains active code snippet in 1 sentence', icon: 'code' },
-    { action_id: 'review_pr', label: 'PR Review', description: 'Generates PR summary, risk analysis & review order', icon: 'file-text' },
-    { action_id: 'commit_summary', label: 'Commit Summary', description: 'Explains commit changes and impact', icon: 'git-commit' },
-    { action_id: 'debug_assistant', label: 'Debug & Fix', description: 'Scans for stack trace or bug root cause', icon: 'bug' },
-    { action_id: 'trace_execution', label: 'Trace Execution', description: 'Traces execution flow and dependencies', icon: 'activity' },
-    { action_id: 'codebase_qa', label: 'Codebase Q&A', description: 'Answers contextual code questions', icon: 'help' },
+  const learningActions: RecommendedAction[] = [
+    { action_id: 'explain', label: 'Explain', description: 'Explain Binary Search algorithm', icon: 'book' },
+    { action_id: 'hint', label: 'Socratic Hint', description: 'Give me a progressive hint ladder', icon: 'hint' },
+    { action_id: 'teach', label: 'Teach Deeply', description: 'Stepwise pedagogical walkthrough', icon: 'teach' },
+    { action_id: 'practice', label: 'Practice Quiz', description: 'Generate practice exercise', icon: 'target' },
+    { action_id: 'interview', label: 'Mock Interview', description: 'Start technical roleplay interview', icon: 'users' },
   ];
-
-  const defaultActions: RecommendedAction[] = [
-    { action_id: 'explain_code', label: 'Explain Code', description: 'Explains active code snippet in 1 sentence', icon: 'code' },
-    { action_id: 'trace_execution', label: 'Trace Execution', description: 'Traces execution flow and variables', icon: 'activity' },
-    { action_id: 'debug_assistant', label: 'Debug & Fix', description: 'Scans selected code for edge-case bugs', icon: 'bug' },
-  ];
-
-  const actions = isGitHub ? githubActions : defaultActions;
 
   const renderIcon = (iconKey?: string) => {
     switch (iconKey) {
-      case 'code':
-        return <Code size={13} style={{ marginRight: '6px' }} />;
-      case 'bug':
-        return <Bug size={13} style={{ marginRight: '6px' }} />;
-      case 'git-commit':
-        return <GitCommit size={13} style={{ marginRight: '6px' }} />;
-      case 'file-text':
-        return <FileText size={13} style={{ marginRight: '6px' }} />;
-      case 'activity':
-        return <Activity size={13} style={{ marginRight: '6px' }} />;
-      case 'help':
+      case 'book':
+        return <BookOpen size={13} style={{ marginRight: '6px' }} />;
+      case 'hint':
         return <HelpCircle size={13} style={{ marginRight: '6px' }} />;
+      case 'teach':
+        return <GraduationCap size={13} style={{ marginRight: '6px' }} />;
+      case 'target':
+        return <Target size={13} style={{ marginRight: '6px' }} />;
+      case 'users':
+        return <Users size={13} style={{ marginRight: '6px' }} />;
       default:
         return <Sparkles size={13} style={{ marginRight: '6px' }} />;
     }
@@ -59,7 +45,7 @@ export const ActionPillsRow: React.FC = () => {
         scrollbarWidth: 'none',
       }}
     >
-      {actions.map((action) => {
+      {learningActions.map((action) => {
         const isSelected = selectedAction?.action_id === action.action_id;
         const isLoading = isSelected && (panelState === 'THINKING' || panelState === 'STREAMING');
 

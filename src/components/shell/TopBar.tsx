@@ -2,14 +2,14 @@ import React from 'react';
 import { useSidePanel } from '@/hooks/useSidePanel';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { X, Maximize2, Minimize2, Settings, ShieldCheck, GitBranch } from 'lucide-react';
+import { X, Maximize2, Minimize2, Settings, ShieldCheck, GraduationCap } from 'lucide-react';
 
 export const TopBar: React.FC = () => {
   const { closePanel, isExpanded, toggleExpand, activeContext } = useSidePanel();
 
-  const platformName = activeContext?.sanitized_summary ? 'GitHub PR #42' : 'Universal Context';
+  const titleText = activeContext?.sanitized_summary || 'Universal Learning Copilot';
   const confidenceTier = activeContext?.confidence_tier || 'HIGH';
-  const confidenceScore = activeContext?.confidence_score || 0.92;
+  const confidenceScore = activeContext?.confidence_score || 0.98;
 
   return (
     <div
@@ -23,7 +23,7 @@ export const TopBar: React.FC = () => {
         userSelect: 'none',
       }}
     >
-      {/* Left: Platform Icon & Detected Context */}
+      {/* Left: Learning Icon & Context Title */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <div
           style={{
@@ -37,15 +37,15 @@ export const TopBar: React.FC = () => {
             color: '#ffffff',
           }}
         >
-          <GitBranch size={16} />
+          <GraduationCap size={16} />
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-            {platformName}
+            {titleText.length > 22 ? titleText.slice(0, 22) + '...' : titleText}
           </span>
           <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-            Orvixa Intelligence Layer
+            Orvixa Learning Layer
           </span>
         </div>
       </div>
