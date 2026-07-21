@@ -1,6 +1,16 @@
-# Orvixa: Cloud-Native AI Learning Copilot
+# Orvixa: Intelligence Layer for the Web
 
-> Orvixa is an intelligent, cloud-native learning copilot designed to embed inside online learning platforms (e.g., MockPreps, Testbook, Oliveboard, Government Exam platforms, LMS, coaching platforms). Unlike simple conversational chatbots, Orvixa acts as an active, pedagogical AI teacher that understands student progress, diagnoses conceptual gaps, adapts to exam patterns, and provides structured guidance.
+> Orvixa is an **Intelligence Layer for the Web**. It embeds directly into any host web application (GitHub, Google Docs, Figma, Notion, IDEs, LMS, Banking Portals, Enterprise SaaS, Analytics Dashboards, PDFs) and makes the host platform itself feel hyper-intelligent.
+>
+> Governed strictly by **Product Constitution V2** ([ORVIXA_PRODUCT_CONSTITUTION_V2.md](file:///c:/Users/UMESH/Desktop/orvixa/ORVIXA_PRODUCT_CONSTITUTION_V2.md)).
+> 
+> **The 6 Absolute Laws:**
+> 1. **Host Platform First. Orvixa Second.** (Host website is always primary; never replace, hijack, or redirect)
+> 2. **Default State = Invisible.** (AI exists only when invited by user action or friction signals)
+> 3. **The Side Panel IS the Product.** (Collapsible 30–40% resizable side dock; expansion is optional)
+> 4. **Never Force Conversations.** (Context-driven intent pipeline; prompt typing is secondary fallback)
+> 5. **Current Context > Historical Memory.** (Solve the immediate page task exceptionally well)
+> 6. **Surgical Brevity.** (Outputs are concise, structured intent schemas rendered by frontend engine)
 
 ---
 
