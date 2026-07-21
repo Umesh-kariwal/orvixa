@@ -1,4 +1,5 @@
-# ROADMAP V3 — UNIVERSAL AI LEARNING & INTERVIEW COPILOT
+# ORVIXA PRODUCT ROADMAP
+*Universal AI Learning & Interview Copilot*
 
 ---
 
@@ -13,6 +14,9 @@
 - [x] **Milestone 7: System Integration & Architectural Hardening** *(Completed)*
 - [x] **Milestone 8 & 9: GitHub Intelligence & Reasoning Engine** *(Completed — Preserved as Codebase Learning Module)*
 - [x] **Milestone 10: Product Direction Reset & Constitution V3 Architecture** *(Completed)*
-- [ ] **Milestone 11: Adaptive Learning Card Engine (Programming, Physics, English)** *(Next Up)*
-- [ ] **Milestone 12: Interactive Mock Interview & Roleplay Engine** *(Upcoming)*
-- [ ] **Milestone 13: Chrome Web Store Production Launch** *(Upcoming)*
+- [x] **Milestone 11: Learning Experience Runtime V1** *(Completed)*
+- [x] **Milestone 12: Browser Experience Engine V1** *(Completed)*
+- [x] **Milestone 13: Universal Context Understanding Engine V1** *(Completed)*
+- [ ] **Milestone 14: Adaptive Learning Card Engine (Programming, Physics, English)** *(Next Up)*
+- [ ] **Milestone 15: Interactive Mock Interview & Roleplay Engine** *(Upcoming)*
+- [ ] **Milestone 16: Chrome Web Store Production Launch** *(Upcoming)*

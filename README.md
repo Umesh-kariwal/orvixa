@@ -1,94 +1,135 @@
-# Orvixa: Intelligence Layer for the Web
+# ORVIXA
+> **Universal AI Learning & Interview Copilot**  
+> *"An AI teacher that appears exactly where learning happens."*
 
-> Orvixa is an **Intelligence Layer for the Web**. It embeds directly into any host web application (GitHub, Google Docs, Figma, Notion, LeetCode, HackerRank, StackOverflow, Jupyter, IDEs, LMS, Banking Portals, Enterprise SaaS, Analytics Dashboards, PDFs) and makes the host platform itself feel hyper-intelligent.
->
-> Governed strictly by **Product Constitution V2** ([ORVIXA_PRODUCT_CONSTITUTION_V2.md](file:///c:/Users/UMESH/Desktop/orvixa/ORVIXA_PRODUCT_CONSTITUTION_V2.md)).
-> 
-> **The 6 Absolute Laws:**
-> 1. **Host Platform First. Orvixa Second.** (Host website is always primary; never replace, hijack, or redirect)
-> 2. **Default State = Invisible.** (AI exists only when invited by user action or friction signals)
-> 3. **The Side Panel IS the Product.** (Collapsible 30–40% resizable side dock; expansion is optional)
-> 4. **Never Force Conversations.** (Context-driven intent pipeline; prompt typing is secondary fallback)
-> 5. **Current Context > Historical Memory.** (Solve the immediate page task exceptionally well)
-> 6. **Surgical Brevity.** (Outputs are concise, structured intent schemas rendered by frontend engine)
+Orvixa is a silent, permission-based browser intelligence layer designed to aid students and developers without pulling them away from their learning environment. The host website is always the hero; Orvixa sits quietly beside it.
 
 ---
 
-## 🎯 System Architecture Overview
+## 🧭 VISION & CORE IDENTITY
 
-Orvixa is built on a 6-layer decoupled architecture:
+Orvixa is built on a single, uncompromising principle:
+**The user should never leave their learning environment to receive intelligent help.**
+
+Instead of forcing users to copy-paste code or context into separate chat interfaces, Orvixa integrates into the active page context, providing progressive Socratic hint ladders, conceptual breakdowns, step-by-step math formulas, and interactive mock interviews on-demand.
+
+---
+
+## ⚡ CORE CAPABILITIES
+
+1. **Invisible by Default:** No flashing widgets, no auto-opening sidebars, and no advertisement noise. Summoned only via configurable shortcut (`Ctrl+K` / `Cmd+K`) or Right Click -> `Ask Orvixa`.
+2. **Universal Context Engine:** Cleans noisy DOM elements, masks sensitive PII or credentials, compresses tokens by 35%–45%, and classifies web content into 11 educational categories (e.g. Programming, Physics, Mathematics, English).
+3. **Intent-First Learning Card Runtime:** Automatically resolves the pedagogical mode (Explain, Hint, Teach, Practice, Summarize, Interview) and returns beautiful subject-specific cards instead of long walls of text.
+4. **Resiliency & Performance:** Sub-150ms opening transitions, 60FPS resize drag handles, closed Shadow DOM protection, and real-time SSE token streaming.
+
+---
+
+## 🛠️ TECH STACK
+
+- **Frontend:** React, TypeScript, Vite, Tailwind CSS (optional - vanilla CSS tokens preferred), Lucide Icons.
+- **Backend:** FastAPI, Python, Pydantic V2, Uvicorn, pytest.
+- **AI Engine:** Official Google GenAI SDK (Gemini 2.5 Flash), Provider-Agnostic Circuit-Breaker Gateway.
+
+---
+
+## 🗺️ PROGRESS TRACKER
+
+| Milestone | Capability Name | Current Status |
+| :--- | :--- | :---: |
+| **M1** | Design System & Token Engine | ✅ |
+| **M2** | Context Intelligence Engine | ✅ |
+| **M3** | Side Panel Shell & Closed Shadow DOM | ✅ |
+| **M4** | Typed Intent Renderer Runtime & 10 Atomic Renderers | ✅ |
+| **M5** | Real-Time AI Streaming Platform & Provider Gateway | ✅ |
+| **M6** | Universal Platform Integration Framework | ✅ |
+| **M7** | System Integration & Architectural Hardening | ✅ |
+| **M8 & M9**| GitHub Intelligence & Reasoning Engine | ✅ *(Preserved)* |
+| **M10** | Product Direction Reset & Constitution V3 Architecture | ✅ |
+| **M11** | Learning Experience Runtime V1 | ✅ |
+| **M12** | Browser Experience Engine V1 | ✅ |
+| **M13** | Universal Context Understanding Engine V1 | ✅ |
+| **M14** | **Adaptive Learning Card Engine (Programming, Physics, English)** | ⏳ *(Next)* |
+
+- **Current Development Phase:** Phase 2 (Universal AI Learning & Mock Interview Platform)
+- **Overall Progress:** `81%`
+- **Repository Version:** `v0.3.0`
+- **Latest Verification:** `24 / 24 Pytest Tests Passed`, `0 oxlint Errors`
+
+---
+
+## 📁 REPOSITORY STRUCTURE
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│                              ORVIXA SYSTEM ARCHITECTURE                                 │
-├─────────────────────────────────────────────────────────────────────────────────────────┤
-│  [1. Platform Integration Framework] (GitHub / LeetCode / Notion / Docs / Generic Web)  │
-│         │                                                                               │
-│         ▼                                                                               │
-│  [2. Universal Context Intelligence] (PII Redaction + Multi-Stage Intent Scoring)       │
-│         │                                                                               │
-│         ▼                                                                               │
-│  [3. Real-Time AI Streaming Gateway] (Server-Sent Events + AbortController Cancel)     │
-│         │                                                                               │
-│         ▼                                                                               │
-│  [4. Provider-Agnostic AI Layer]     (BaseAIProvider + Google Gemini 2.5 + CircuitBreaker)│
-│         │                                                                               │
-│         ▼                                                                               │
-│  [5. Universal Renderer Runtime]     (Strict Schema Validation + 10 Atomic Renderers)  │
-│         │                                                                               │
-│         ▼                                                                               │
-│  [6. Side Panel Shell in Shadow DOM] (Closed Shadow DOM Isolation + 35% Resizable Dock) │
-└─────────────────────────────────────────────────────────────────────────────────────────┘
+orvixa/
+├── docs/                      # Permanent Documentation
+│   ├── ARCHITECTURE.md        # Core Architecture, Interaction Flow & CSP
+│   ├── PRODUCT_CONSTITUTION.md# Product Goals, Platform Laws & UX Constraints
+│   └── ROADMAP.md             # Project roadmap & milestones
+├── backend/                   # FastAPI Server
+│   ├── app/
+│   │   ├── api/               # API Router and REST Endpoints
+│   │   ├── core/              # Context, AI, Learning, and GitHub Engines
+│   │   └── schemas/           # Pydantic V2 Contract Schemas
+│   └── tests/                 # Pytest Test Suites
+├── src/                       # React Side panel Extension UI
+│   ├── components/            # Layout components (Shell, TopBar, BottomBar)
+│   ├── context/               # Global state contexts
+│   ├── integration/           # Platform adapters (GitHub, LeetCode, Notion)
+│   ├── rendering/             # Typed renderer Registry and Card components
+│   └── services/              # SSE streaming & storage client services
+├── CHANGELOG.md               # Version histories
+└── LICENSE                    # License information
 ```
 
 ---
 
-## 🛠️ Production Milestones Completed
+## 🚀 INSTALLATION & LOCAL DEVELOPMENT
 
-- [x] **Milestone 1: Design System & Design Tokens** (Slate/Milk Light & Obsidian Dark themes, atomic UI primitives).
-- [x] **Milestone 2: Universal Context Intelligence Engine** (PII redactor, multi-stage intent engine, silence policy).
-- [x] **Milestone 3: Side Panel Product Shell** (Closed Shadow DOM container, 35% resizable dock, 10-state machine, Manifest V3 extension).
-- [x] **Milestone 4: Typed Intent Renderer & Universal Runtime** (Strict schema validation, O(1) renderer registry, 10 production atomic intent renderers).
-- [x] **Milestone 5: Real-Time AI Streaming Platform** (Provider-agnostic `BaseAIProvider`, SSE streaming gateway, circuit breaker, AbortController cancellation).
-- [x] **Milestone 6: Universal Platform Integration Framework** (Multi-signal confidence matching, `AdapterRegistry`, selection/editor extractors, GitHub/LeetCode/Notion/Generic adapters).
-- [x] **Milestone 7: System Integration & Architectural Hardening** (Cross-milestone audit, zero linter warnings, 100% test pass).
+### Backend Server Setup
+1. Navigate to `/backend`:
+   ```bash
+   cd backend
+   ```
+2. Setup environment keys:
+   ```bash
+   cp .env.example .env
+   # Add your GEMINI_API_KEY
+   ```
+3. Run FastAPI backend server:
+   ```bash
+   uvicorn app.main:app --reload
+   ```
+
+### Frontend Panel Setup
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+2. Start local development hot reloading server:
+   ```bash
+   npm run dev
+   ```
+3. Compile production extension assets:
+   ```bash
+   npm run build
+   ```
 
 ---
 
-## 🚀 Quick Start Guide
+## 🧪 RUNNING VERIFICATION SUITES
 
-### Frontend Setup (React + TypeScript + Vite)
+### Run Backend Tests
 ```bash
-# 1. Install frontend dependencies
-npm install
+pytest
+```
 
-# 2. Run static linter validation (0 warnings required)
+### Run Frontend Linter
+```bash
 npx oxlint
-
-# 3. Production build verification
-npm run build
-
-# 4. Start Vite development server
-npm run dev
-```
-
-### Backend Setup (FastAPI + Python 3.11)
-```bash
-# 1. Navigate to backend directory
-cd backend
-
-# 2. Activate virtual environment
-.\venv\Scripts\activate
-
-# 3. Run Pytest unit and integration test suite
-python -m pytest tests/test_streaming_platform.py tests/test_context_engine.py
-
-# 4. Start FastAPI server
-uvicorn app.main:app --reload --port 8000
 ```
 
 ---
 
-## 📄 License
+## 📄 LICENSE
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

@@ -1,4 +1,4 @@
-# ORVIXA PRODUCT CONSTITUTION V3
+# ORVIXA PRODUCT & UX CONSTITUTION
 *Universal AI Learning & Interview Copilot*
 
 ---
@@ -34,3 +34,12 @@ Orvixa goes to the learner; the learner never goes to Orvixa.
 | **Teach Deeply** | Comprehensive conceptual walkthrough | `Concept`, `Numerical`, `Practice` |
 | **Interview Mode** | Mock roleplay dialogue | `Question`, `Weak Answer`, `Feedback` |
 | **Revision Mode** | Flashcards or key highlights | `Key Metrics Grid`, `Timeline` |
+
+---
+
+## 4. UX & DESIGN LAWS
+
+- **Visible Pixel Purity:** Welcome cards, promotional texts, and upgrade banners are strictly forbidden. Every element on the side panel must support the immediate learning objective.
+- **Side Panel Mechanics:** The panel sits on the right side of the screen at a default width of 35% (resizable 25%–50%). Toggles open/closed under 150ms.
+- **Escape Hatch:** Pressing `Esc` immediately collapses the side panel and aborts any active streaming AI requests.
+- **Privacy Control:** Compact screen-scan icon in BottomBar. Captures screen context ONLY after explicit user click.
