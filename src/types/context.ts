@@ -25,6 +25,8 @@ export interface NormalizedContextPayload {
 }
 
 export interface ContextIntelligenceResult {
+  context_id?: string;
+  timestamp?: number;
   confidence_tier: ConfidenceTier;
   confidence_score: number;
   primary_intent: string;

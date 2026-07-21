@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { SidePanelStateContext, type PanelState } from './SidePanelStateContext';
 import type { ContextIntelligenceResult, RecommendedAction } from '@/types/context';
+import { ContextObserverManager } from '@/integration/manager/ContextObserverManager';
+import { StreamingService } from '@/services/streamingService';
 
 const STORAGE_WIDTH_KEY = 'orvixa_panel_width_percent';
 const STORAGE_COLLAPSED_KEY = 'orvixa_panel_collapsed';
@@ -31,10 +33,15 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const closePanel = useCallback(() => {
     setPanelState('COLLAPSED');
     localStorage.setItem(STORAGE_COLLAPSED_KEY, 'true');
+    StreamingService.cancelActiveStream();
   }, []);
 
   const togglePanel = useCallback(() => {
-    setPanelState((prev) => (prev === 'COLLAPSED' || prev === 'HIDDEN' ? 'READY' : 'COLLAPSED'));
+    setPanelState((prev) => {
+      const next = prev === 'COLLAPSED' || prev === 'HIDDEN' ? 'READY' : 'COLLAPSED';
+      if (next === 'COLLAPSED') StreamingService.cancelActiveStream();
+      return next;
+    });
   }, []);
 
   const setWidthPercent = useCallback((width: number) => {
@@ -53,29 +60,48 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setStreamingText('');
     setErrorMessage(null);
 
-    // Simulate real streaming breakdown (in Milestone 5 connected to Gemini streaming)
-    setTimeout(() => {
-      setPanelState('STREAMING');
-      let currentText = '';
-      const sampleTokens = [
-        `Analyzing ${action.label}... `,
-        'Derived intent: Code optimization. ',
-        'Found logic trap: Array index out of bounds in loop. ',
-        'Suggested Fix: Guard index check before accessing vector element.',
-      ];
+    StreamingService.streamIntent({
+      contextId: activeContext?.context_id || 'ctx_live',
+      intentId: 'intent_' + action.action_id,
+      intentType: action.action_id === 'trace_execution' ? 'CODE_DIFF_TRACE' : 'MICRO_SUMMARY',
+      action,
+      onToken: (tokenText) => {
+        setPanelState('STREAMING');
+        setStreamingText((prev) => prev + tokenText);
+      },
+      onFinal: () => {
+        setPanelState('READY');
+      },
+      onError: (err) => {
+        setErrorMessage(err);
+        setPanelState('ERROR');
+      },
+    });
+  }, [activeContext]);
 
-      let idx = 0;
-      const interval = setInterval(() => {
-        if (idx < sampleTokens.length) {
-          currentText += sampleTokens[idx];
-          setStreamingText(currentText);
-          idx++;
-        } else {
-          clearInterval(interval);
-          setPanelState('READY');
-        }
-      }, 300);
-    }, 400);
+  // Hook Universal Platform Integration Observers
+  useEffect(() => {
+    ContextObserverManager.startObserving({
+      onContextChange: (normalized) => {
+        setActiveContext({
+          context_id: 'ctx_' + normalized.timestamp,
+          timestamp: normalized.timestamp,
+          confidence_tier: normalized.platform.confidence >= 0.85 ? 'HIGH' : normalized.platform.confidence >= 0.6 ? 'MEDIUM' : 'LOW',
+          confidence_score: normalized.platform.confidence,
+          primary_intent: normalized.platform.name,
+          side_panel_state: 'READY',
+          redacted: true,
+          sanitized_summary: normalized.summary,
+          recommended_actions: [
+            { action_id: 'explain_code', label: 'Explain Code', description: 'Explains active code snippet in 1 sentence', icon: 'code' },
+            { action_id: 'trace_execution', label: 'Trace Execution', description: 'Traces execution flow and variables', icon: 'git-commit' },
+            { action_id: 'find_bugs', label: 'Debug & Fix', description: 'Scans selected code for edge-case bugs', icon: 'bug' },
+          ],
+        });
+      },
+    });
+
+    return () => ContextObserverManager.stopObserving();
   }, []);
 
   // Keyboard shortcut trap (Esc closes, Ctrl+K toggles)
