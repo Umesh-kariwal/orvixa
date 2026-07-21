@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1 import copilot, health, context
+from app.api.v1 import copilot, health, context, stream
 
 api_v1_router = APIRouter()
 
@@ -11,3 +11,6 @@ api_v1_router.include_router(copilot.router, prefix="/copilot", tags=["AI Copilo
 
 # Register Universal Context Intelligence Engine endpoints
 api_v1_router.include_router(context.router, tags=["Context Intelligence Engine"])
+
+# Register Real-time AI Streaming Gateway endpoints
+api_v1_router.include_router(stream.router, tags=["Real-time AI Streaming Gateway"])
