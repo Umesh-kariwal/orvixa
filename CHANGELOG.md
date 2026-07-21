@@ -4,6 +4,15 @@ All notable changes to the Orvixa Universal AI Learning & Interview Copilot proj
 
 ---
 
+## [0.5.1] - 2026-07-21
+### Added
+- **Mandatory Platform Hardening (SP-001):**
+  - Implemented `InputValidator` checking text length, size, and encoding safety.
+  - Implemented `PromptInjectionGuard` detecting and blocking jailbreaks, override tricks, and Unicode whitespace obfuscation patterns.
+  - Added backend IP-based request `RateLimiter` preventing client request storms.
+  - Shielded production error messages (suppressing stack trace and environment path leaks).
+  - Validated client-side rendering protection logic ensuring zero raw DOM html injections.
+
 ## [0.5.0] - 2026-07-21
 ### Added
 - **MVP Real AI Integration & Production Conversation Engine (MVP-002):**

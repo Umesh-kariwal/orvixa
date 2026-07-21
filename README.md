@@ -26,6 +26,18 @@ Instead of forcing users to copy-paste code or context into separate chat interf
 
 ---
 
+## 🔒 SECURITY & PRIVACY ARCHITECTURE
+
+Orvixa implements a strict **Zero-Trust Input and Privacy Architecture** designed to protect users and backend APIs from abuse:
+
+- **Input Validation:** Enforces a maximum 50,000-character payload ceiling and UTF-8 encoding checks on all context and query inputs.
+- **Prompt Injection Shield:** Neutralizes system override indicators, indirect webpage injections, and invisible Unicode whitespace obfuscation patterns.
+- **Privacy Masking PII Filter:** Scans and obfuscates API credentials, credit cards, emails, and SSNs. Captures screen context *only* after explicit user-triggered permissions.
+- **Safe DOM Rendering (XSS Protection):** Sanitizes and replaces raw HTML tags before client rendering, avoiding unsafe parser triggers or `dangerouslySetInnerHTML`.
+- **IP-Based API Rate Limiter:** Throttles incoming client requests to a maximum of 30 queries per minute to protect the backend from accidental loops or storms.
+
+---
+
 ## 🛠️ TECH STACK
 
 - **Frontend:** React, TypeScript, Vite, Tailwind CSS (optional - vanilla CSS tokens preferred), Lucide Icons.
@@ -51,13 +63,14 @@ Instead of forcing users to copy-paste code or context into separate chat interf
 | **M12** | Browser Experience Engine V1 | ✅ |
 | **M13** | Universal Context Understanding Engine V1 | ✅ |
 | **MVP-1** | Real AI Learning Experience MVP (MVP-001) | ✅ |
-| **MVP-2** | **Production AI & Conversation Engine MVP (MVP-002)** | ✅ |
+| **MVP-2** | Production AI & Conversation Engine MVP (MVP-002) | ✅ |
+| **SP-1** | **Mandatory Platform Hardening (SP-001)** | ✅ |
 | **M14** | **Adaptive Learning Card Engine (Programming, Physics, English)** | ⏳ *(Next)* |
 
 - **Current Development Phase:** Phase 2 (Universal AI Learning & Mock Interview Platform)
-- **Overall Progress:** `92%`
-- **Repository Version:** `v0.5.0`
-- **Latest Verification:** `25 / 25 Pytest Tests Passed`, `0 oxlint Errors`
+- **Overall Progress:** `96%`
+- **Repository Version:** `v0.5.1`
+- **Latest Verification:** `29 / 29 Pytest Tests Passed`, `0 oxlint Errors`
 
 ---
 

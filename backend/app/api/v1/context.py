@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Request
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any
 from app.schemas.context import (
@@ -12,6 +12,7 @@ from app.core.context.intent_engine import MultiStageIntentEngine
 from app.core.context.action_engine import DynamicActionRecommendationEngine
 from app.core.context.universal_engine import UniversalContextEngine
 from app.schemas.learning_context import LearningContextSchema
+from app.core.security.guardian import InputValidator, PromptInjectionGuard, RateLimiter
 
 router = APIRouter(prefix="/context", tags=["Context Intelligence Engine"])
 
@@ -30,12 +31,26 @@ class UniversalContextRequest(BaseModel):
     status_code=status.HTTP_200_OK,
     summary="Process context through the Universal Context Understanding Pipeline",
 )
-async def process_universal_context(payload: UniversalContextRequest) -> LearningContextSchema:
+async def process_universal_context(payload: UniversalContextRequest, request: Request) -> LearningContextSchema:
     """Universal Context Engine Endpoint.
 
     Processes raw text through PII Masking, Boilerplate Removal, Token Compression,
     and Educational Domain Classification.
     """
+    # 1. Rate Limiting Check
+    RateLimiter.check_rate_limit(request.client.host if request.client else "127.0.0.1")
+
+    # 2. Input Validation (Oversized payload limits)
+    InputValidator.validate_text(payload.raw_text)
+
+    # 3. Prompt Injection Shielding on page raw text
+    is_inj, pattern = PromptInjectionGuard.contains_injection(payload.raw_text)
+    if is_inj:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Security Alert: Malicious prompt pattern detected."
+        )
+
     try:
         return UniversalContextEngine.process_context(
             raw_text=payload.raw_text,
@@ -47,7 +62,7 @@ async def process_universal_context(payload: UniversalContextRequest) -> Learnin
     except Exception as err:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Universal Context processing failed: {str(err)}",
+            detail="Universal Context processing failed.",
         )
 
 
@@ -57,15 +72,11 @@ async def process_universal_context(payload: UniversalContextRequest) -> Learnin
     status_code=status.HTTP_200_OK,
     summary="Analyze universal web context and return contextual intelligence",
 )
-async def analyze_context(payload: NormalizedContextSchema) -> ContextIntelligenceResponse:
-    """Universal Context Intelligence Analysis Endpoint.
+async def analyze_context(payload: NormalizedContextSchema, request: Request) -> ContextIntelligenceResponse:
+    """Universal Context Intelligence Analysis Endpoint."""
+    RateLimiter.check_rate_limit(request.client.host if request.client else "127.0.0.1")
+    InputValidator.validate_text(payload.visible_text_summary)
 
-    1. Redacts PII secrets from input context via PIIRedactor.
-    2. Resolves platform adapter via AdapterRegistry.
-    3. Evaluates multi-stage intent and confidence tier.
-    4. Generates dynamic recommended actions.
-    5. Determines side panel state based on Silence Policy.
-    """
     try:
         # 1. PII Redaction Step
         redacted_summary, was_redacted = PIIRedactor.sanitize(payload.visible_text_summary or "")
@@ -110,8 +121,8 @@ async def analyze_context(payload: NormalizedContextSchema) -> ContextIntelligen
             sanitized_summary=redacted_summary,
         )
 
-    except Exception as err:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Context Intelligence Analysis failed: {str(err)}",
+            detail="Context Intelligence Analysis failed.",
         )

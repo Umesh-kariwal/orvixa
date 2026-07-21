@@ -2,11 +2,12 @@ import asyncio
 import json
 import uuid
 from typing import Any, Dict, Optional, List
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from app.core.ai.provider_registry import AIProviderRegistry
+from app.core.security.guardian import InputValidator, PromptInjectionGuard, RateLimiter
 
 router = APIRouter(prefix="/stream", tags=["Real-time AI Streaming Gateway"])
 
@@ -36,12 +37,27 @@ async def cancel_stream(payload: CancelRequestSchema):
 
 
 @router.post("/intent", summary="Stream AI intent response token-by-token via Server-Sent Events (SSE)")
-async def stream_intent(payload: StreamRequestSchema):
+async def stream_intent(payload: StreamRequestSchema, request: Request):
     """Real-Time Streaming Gateway Endpoint.
 
     Streams token chunks via Server-Sent Events (SSE) `text/event-stream`.
     Supports incremental validation, heartbeats, cancellation, and context versioning.
     """
+    # 1. Rate Limiting Check
+    RateLimiter.check_rate_limit(request.client.host if request.client else "127.0.0.1")
+
+    # 2. Input Validation (Oversized payload limit)
+    InputValidator.validate_text(payload.prompt_text)
+
+    # 3. Prompt Injection Shielding
+    if payload.prompt_text:
+        is_inj, pattern = PromptInjectionGuard.contains_injection(payload.prompt_text)
+        if is_inj:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Security Alert: Malicious prompt injection pattern blocked."
+            )
+
     provider = AIProviderRegistry.resolve_provider(payload.provider_hint)
 
     async def sse_generator():
@@ -57,7 +73,7 @@ async def stream_intent(payload: StreamRequestSchema):
                 intent_id=payload.intent_id,
                 conversation_history=payload.conversation_history,
             ):
-                # 1. Check for Cancellation
+                # Check for Cancellation
                 if request_cancel_id in cancelled_requests:
                     cancelled_requests.remove(request_cancel_id)
                     cancel_chunk = {
@@ -69,7 +85,7 @@ async def stream_intent(payload: StreamRequestSchema):
                     yield f"data: {json.dumps(cancel_chunk)}\n\n"
                     break
 
-                # 2. Yield SSE Chunk
+                # Yield SSE Chunk
                 chunk_data = {
                     "event": "token" if not chunk.is_final else "final",
                     "chunk_id": chunk.chunk_id,
@@ -85,13 +101,13 @@ async def stream_intent(payload: StreamRequestSchema):
 
             AIProviderRegistry.record_success(provider.provider_name)
 
-        except Exception as err:
+        except Exception:
             AIProviderRegistry.record_failure(provider.provider_name)
             error_chunk = {
                 "event": "error",
                 "context_id": payload.context_id,
                 "intent_id": payload.intent_id,
-                "message": str(err),
+                "message": "Real-time AI connection failure occurred.",
             }
             yield f"data: {json.dumps(error_chunk)}\n\n"
 
