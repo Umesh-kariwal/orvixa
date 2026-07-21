@@ -26,7 +26,7 @@ Instead of forcing users to copy-paste code or context into separate chat interf
 
 ---
 
-## 🔒 SECURITY & PRIVACY ARCHITECTURE
+## 🔒 SECURITY, PRIVACY & OBSERVABILITY
 
 Orvixa implements a strict **Zero-Trust Input and Privacy Architecture** designed to protect users and backend APIs from abuse:
 
@@ -35,6 +35,8 @@ Orvixa implements a strict **Zero-Trust Input and Privacy Architecture** designe
 - **Privacy Masking PII Filter:** Scans and obfuscates API credentials, credit cards, emails, and SSNs. Captures screen context *only* after explicit user-triggered permissions.
 - **Safe DOM Rendering (XSS Protection):** Sanitizes and replaces raw HTML tags before client rendering, avoiding unsafe parser triggers or `dangerouslySetInnerHTML`.
 - **IP-Based API Rate Limiter:** Throttles incoming client requests to a maximum of 30 queries per minute to protect the backend from accidental loops or storms.
+- **Structured JSON Logging:** Outputs log records formatted as JSON (in `production` or `beta` modes) including correlation tracking tags, scrubbing credentials and secret keys dynamically.
+- **Unique Error Boundaries:** Formats network failures with friendly error tags (`ERR-XXXX`) and recovery guidelines rather than raw backtraces.
 
 ---
 
@@ -65,13 +67,14 @@ Orvixa implements a strict **Zero-Trust Input and Privacy Architecture** designe
 | **MVP-1** | Real AI Learning Experience MVP (MVP-001) | ✅ |
 | **MVP-2** | Production AI & Conversation Engine MVP (MVP-002) | ✅ |
 | **SP-1** | Mandatory Platform Hardening (SP-001) | ✅ |
-| **MVP-3** | **Production Browser Extension & Beta Readiness (MVP-003)** | ✅ |
+| **MVP-3** | Production Browser Extension & Beta Readiness (MVP-003) | ✅ |
+| **MVP-4** | **Engineering Quality, Observability & Beta Validation (MVP-004)**| ✅ |
 | **M14** | **Adaptive Learning Card Engine (Programming, Physics, English)** | ⏳ *(Next)* |
 
 - **Current Development Phase:** Phase 2 (Universal AI Learning & Mock Interview Platform)
-- **Overall Progress:** `100%` (Beta Core Foundation)
-- **Repository Version:** `v0.6.0`
-- **Latest Verification:** `29 / 29 Pytest Tests Passed`, `0 oxlint Errors`
+- **Overall Progress:** `100%` (Beta Production Hardened)
+- **Repository Version:** `v0.7.0`
+- **Latest Verification:** `30 / 30 Pytest Tests Passed`, `3 / 3 Playwright E2E Specs Passed`, `0 oxlint Errors`
 
 ---
 
@@ -89,6 +92,7 @@ orvixa/
 │   │   ├── core/              # Context, AI, Learning, and GitHub Engines
 │   │   └── schemas/           # Pydantic V2 Contract Schemas
 │   └── tests/                 # Pytest Test Suites
+├── e2e/                       # Playwright E2E Integration Tests
 ├── src/                       # React Side panel Extension UI
 │   ├── components/            # Layout components (Shell, TopBar, BottomBar)
 │   ├── context/               # Global state contexts
@@ -144,9 +148,14 @@ To load and test the extension directly in your browser:
 
 ## 🧪 RUNNING VERIFICATION SUITES
 
-### Run Backend Tests
+### Run Backend Unit & Security Tests
 ```bash
 pytest
+```
+
+### Run Playwright E2E Tests
+```bash
+npx playwright test
 ```
 
 ### Run Frontend Linter

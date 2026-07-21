@@ -41,6 +41,11 @@ export interface SidePanelStateContextType {
   currentView: ActiveView;
   onboardingCompleted: boolean;
   customApiKey: string;
+  performanceMetrics?: {
+    firstOpenTime?: number;
+    ttft?: number;
+    totalDuration?: number;
+  };
 
   // Actions
   openPanel: () => void;

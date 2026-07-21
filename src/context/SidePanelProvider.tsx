@@ -20,7 +20,7 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [streamingText, setStreamingText] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // MVP-001/002/003 Additions
+  // MVP-001/002/003/004 Additions
   const [conversationHistory, setConversationHistory] = useState<LearningMessage[]>([]);
   const [thinkingStep, setThinkingStep] = useState<'context' | 'intent' | 'explanation' | 'streaming' | 'idle'>('idle');
   const [currentView, setCurrentViewState] = useState<ActiveView>(
@@ -29,12 +29,29 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [onboardingCompleted, setOnboardingCompleted] = useState<boolean>(initialPrefs.onboardingCompleted);
   const [customApiKey, setCustomApiKey] = useState<string>(initialPrefs.customApiKey);
 
+  // Performance Benchmarking state
+  const [performanceMetrics, setPerformanceMetrics] = useState<{
+    firstOpenTime?: number;
+    ttft?: number;
+    totalDuration?: number;
+  }>({});
+
   const retryCountRef = useRef<number>(0);
   const accumulatedTextRef = useRef<string>('');
+  
+  // Track open panel timing
+  const openTimeRef = useRef<number>(0);
+  const requestStartTimeRef = useRef<number>(0);
+  const isFirstTokenRef = useRef<boolean>(true);
 
   const openPanel = useCallback(() => {
+    openTimeRef.current = performance.now();
     setPanelState('OPENING');
-    setTimeout(() => setPanelState('READY'), 150);
+    setTimeout(() => {
+      setPanelState('READY');
+      const openDuration = performance.now() - openTimeRef.current;
+      setPerformanceMetrics((prev) => ({ ...prev, firstOpenTime: Math.round(openDuration) }));
+    }, 150);
   }, []);
 
   const closePanel = useCallback(() => {
@@ -45,7 +62,15 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const togglePanel = useCallback(() => {
     setPanelState((prev) => {
       const next = prev === 'COLLAPSED' || prev === 'HIDDEN' ? 'READY' : 'COLLAPSED';
-      if (next === 'COLLAPSED') StreamingService.cancelActiveStream();
+      if (next === 'COLLAPSED') {
+        StreamingService.cancelActiveStream();
+      } else {
+        openTimeRef.current = performance.now();
+        setTimeout(() => {
+          const openDuration = performance.now() - openTimeRef.current;
+          setPerformanceMetrics((prevMetrics) => ({ ...prevMetrics, firstOpenTime: Math.round(openDuration) }));
+        }, 150);
+      }
       return next;
     });
   }, []);
@@ -92,6 +117,7 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setErrorMessage(null);
     setPanelState('READY');
     setThinkingStep('idle');
+    setPerformanceMetrics({});
     retryCountRef.current = 0;
     accumulatedTextRef.current = '';
   }, []);
@@ -118,6 +144,8 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setStreamingText('');
     accumulatedTextRef.current = '';
     setErrorMessage(null);
+    isFirstTokenRef.current = true;
+    requestStartTimeRef.current = performance.now();
 
     let currentHistorySnapshot = [...conversationHistory];
 
@@ -143,6 +171,11 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         conversationHistory: currentHistorySnapshot.map((m) => ({ role: m.role, text: m.text })),
         customApiKey: customApiKey,
         onToken: (tokenText) => {
+          if (isFirstTokenRef.current) {
+            isFirstTokenRef.current = false;
+            const latency = performance.now() - requestStartTimeRef.current;
+            setPerformanceMetrics((prev) => ({ ...prev, ttft: Math.round(latency) }));
+          }
           setPanelState('STREAMING');
           setThinkingStep('streaming');
           accumulatedTextRef.current += tokenText;
@@ -152,6 +185,8 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           setPanelState('READY');
           setThinkingStep('idle');
           retryCountRef.current = 0;
+          const totalDuration = performance.now() - requestStartTimeRef.current;
+          setPerformanceMetrics((prev) => ({ ...prev, totalDuration: Math.round(totalDuration) }));
 
           setConversationHistory((prev) => [
             ...prev,
@@ -251,6 +286,7 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         currentView,
         onboardingCompleted,
         customApiKey,
+        performanceMetrics,
         resetSession,
         openPanel,
         closePanel,

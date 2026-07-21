@@ -4,10 +4,21 @@ All notable changes to the Orvixa Universal AI Learning & Interview Copilot proj
 
 ---
 
+## [0.7.0] - 2026-07-21
+### Added
+- **Engineering Quality, Observability & Beta Validation (MVP-004):**
+  - Integrated Playwright automated E2E testing framework configuration.
+  - Wrote multi-flow Playwright E2E specs testing onboarding completion, configuration updates, custom API key validation, and privacy dashboard rendering.
+  - Implemented structured JSON logs for backend API requests, adding correlation, request, and session tracking IDs.
+  - Integrated regex filters automatically scrubbing API keys, credentials, and PII from execution logs.
+  - Added unique client Error IDs (e.g. `ERR-XXXX`) and recovery suggestion mappings.
+  - Designed local benchmarking markers tracking First Open, TTFT, and Stream duration inside the development panel.
+  - Enforced ARIA labels on TopBar controls for standard accessibility screen-reader support.
+
 ## [0.6.0] - 2026-07-21
 ### Added
 - **Production Browser Extension & Beta Readiness (MVP-003):**
-  - Designed and built a beautiful, high-aesthetic first-time user onboarding view (`OnboardingView.tsx`).
+  - Designed and built a welcome onboarding view (`OnboardingView.tsx`).
   - Implemented client preference persistence storage integration preserving settings and API keys.
   - Created a professional configuration portal (`SettingsView.tsx`) allowing custom Gemini API keys, dock sizing adjustments, and stickiness toggles.
   - Added an interactive Privacy Dashboard (`PrivacyDashboard.tsx`) with status checks confirming zero microphone/webcam usage or automatic screen capture.

@@ -131,6 +131,7 @@ export const TopBar: React.FC = () => {
           size="sm"
           onClick={() => setCurrentView(currentView === 'privacy' ? 'learning' : 'privacy')}
           title="Privacy Dashboard"
+          aria-label="Privacy Dashboard"
         >
           <Shield size={14} style={{ color: currentView === 'privacy' ? '#10b981' : 'inherit' }} />
         </Button>
@@ -140,23 +141,48 @@ export const TopBar: React.FC = () => {
           size="sm"
           onClick={() => setCurrentView(currentView === 'settings' ? 'learning' : 'settings')}
           title="Settings Configuration"
+          aria-label="Settings Configuration"
         >
           <Settings size={14} style={{ color: currentView === 'settings' ? '#a78bfa' : 'inherit' }} />
         </Button>
 
-        <Button variant="ghost" size="sm" onClick={togglePin} title={isPinned ? 'Unpin Panel' : 'Pin Panel'}>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={togglePin} 
+          title={isPinned ? 'Unpin Panel' : 'Pin Panel'}
+          aria-label={isPinned ? 'Unpin Panel' : 'Pin Panel'}
+        >
           {isPinned ? <PinOff size={14} style={{ color: 'var(--amber-primary)' }} /> : <Pin size={14} />}
         </Button>
 
-        <Button variant="ghost" size="sm" onClick={togglePanelMode} title={`Switch to ${panelMode === 'dock' ? 'Floating' : 'Dock'} Mode`}>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={togglePanelMode} 
+          title={`Switch to ${panelMode === 'dock' ? 'Floating' : 'Dock'} Mode`}
+          aria-label={`Switch to ${panelMode === 'dock' ? 'Floating' : 'Dock'} Mode`}
+        >
           {panelMode === 'dock' ? <Layers size={14} /> : <Layout size={14} />}
         </Button>
 
-        <Button variant="ghost" size="sm" onClick={toggleExpand} title={isExpanded ? 'Restore Dock' : 'Expand Panel'}>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={toggleExpand} 
+          title={isExpanded ? 'Restore Dock' : 'Expand Panel'}
+          aria-label={isExpanded ? 'Restore Dock' : 'Expand Panel'}
+        >
           {isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
         </Button>
 
-        <Button variant="ghost" size="sm" onClick={closePanel} title="Collapse Panel (Esc)">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={closePanel} 
+          title="Collapse Panel (Esc)"
+          aria-label="Collapse Panel"
+        >
           <X size={16} />
         </Button>
       </div>

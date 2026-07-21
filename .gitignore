@@ -37,3 +37,7 @@ Thumbs.db
 *.suo
 *.sln
 *.sw?
+
+# Test Results
+test-results/
+playwright-report/
