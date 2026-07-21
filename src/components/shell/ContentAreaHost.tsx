@@ -3,7 +3,8 @@ import { useSidePanel } from '@/hooks/useSidePanel';
 import { Card } from '@/components/ui/Card';
 import { Heading, Text } from '@/components/ui/Typography';
 import { Badge } from '@/components/ui/Badge';
-import { Sparkles, Code2, AlertCircle, RefreshCw } from 'lucide-react';
+import { OrvixaIntentRenderer } from '@/components/renderers/OrvixaIntentRenderer';
+import { Sparkles, AlertCircle, RefreshCw } from 'lucide-react';
 
 export const ContentAreaHost: React.FC = () => {
   const { panelState, selectedAction, streamingText, errorMessage } = useSidePanel();
@@ -23,9 +24,41 @@ export const ContentAreaHost: React.FC = () => {
   }
 
   if (panelState === 'STREAMING' || (panelState === 'READY' && streamingText)) {
+    // Construct Typed Intent Payload dynamically
+    const intentType = selectedAction?.action_id === 'trace_execution'
+      ? 'CODE_DIFF_TRACE'
+      : selectedAction?.action_id === 'find_bugs'
+      ? 'CHECKLIST'
+      : selectedAction?.action_id === 'compare'
+      ? 'COMPARISON_TABLE'
+      : 'MICRO_SUMMARY';
+
+    const samplePayload = {
+      intent_type: intentType,
+      confidence: 0.94,
+      summary: streamingText || 'Diagnostic analysis completed successfully.',
+      structured_data: {
+        text: streamingText,
+        filename: 'main.py',
+        diff: [
+          '@@ -14,7 +14,7 @@ def process_user_input(payload):',
+          '   # Check array bounds before accessing index',
+          '-  if index >= len(items):',
+          '+  if items is not None and index < len(items):',
+          '       return None',
+        ],
+        items: [
+          'Check array bounds before access',
+          'Verify null pointer initialization',
+          'Re-run unit test suite',
+        ],
+      },
+      is_streaming: panelState === 'STREAMING',
+    };
+
     return (
       <div style={{ padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        {/* Action Header Card */}
+        {/* Action Header Badge */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Badge variant="mastery" icon={<Sparkles size={12} />}>
             {selectedAction?.label || 'Context Intelligence'}
@@ -33,37 +66,8 @@ export const ContentAreaHost: React.FC = () => {
           <Text variant="muted">Live Response Stream</Text>
         </div>
 
-        {/* Typed Intent Schema Display Slot */}
-        <Card variant="glass" glow>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <Heading level={3} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Code2 size={18} style={{ color: 'var(--brand-primary)' }} />
-              Diagnostic Analysis
-            </Heading>
-
-            <Text variant="body" style={{ whiteSpace: 'pre-wrap' }}>
-              {streamingText}
-            </Text>
-
-            {/* Structured Intent Code Diff Trace Render */}
-            <div
-              style={{
-                backgroundColor: 'var(--bg-primary)',
-                border: '1px solid var(--border-color)',
-                borderRadius: 'var(--radius-md)',
-                padding: '12px',
-                marginTop: '8px',
-              }}
-            >
-              <Text variant="muted" style={{ display: 'block', marginBottom: '6px' }}>
-                Suggested Fix (Diff Trace):
-              </Text>
-              <Text variant="code">
-                {`- if (index >= array.length)\n+ if (array && index < array.length)`}
-              </Text>
-            </div>
-          </div>
-        </Card>
+        {/* Universal Intent Renderer Runtime Slot */}
+        <OrvixaIntentRenderer rawPayload={samplePayload} isStreaming={panelState === 'STREAMING'} />
       </div>
     );
   }
