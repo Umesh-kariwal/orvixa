@@ -1,7 +1,7 @@
 import asyncio
 import json
 import uuid
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
@@ -21,6 +21,7 @@ class StreamRequestSchema(BaseModel):
     prompt_text: Optional[str] = Field(default="", description="Optional prompt override")
     provider_hint: Optional[str] = Field(default="google_gemini", description="Preferred AI provider key")
     context_payload: Dict[str, Any] = Field(default_factory=dict, description="Normalized context payload")
+    conversation_history: List[Dict[str, str]] = Field(default_factory=list, description="Short-term conversation history memory")
 
 
 class CancelRequestSchema(BaseModel):
@@ -47,12 +48,14 @@ async def stream_intent(payload: StreamRequestSchema):
         request_cancel_id = payload.context_id
 
         try:
+            # Pass conversation history down to stream generator
             async for chunk in provider.stream_intent(
                 context_payload=payload.context_payload,
                 intent_type=payload.intent_type,
                 prompt_text=payload.prompt_text or "",
                 context_id=payload.context_id,
                 intent_id=payload.intent_id,
+                conversation_history=payload.conversation_history,
             ):
                 # 1. Check for Cancellation
                 if request_cancel_id in cancelled_requests:

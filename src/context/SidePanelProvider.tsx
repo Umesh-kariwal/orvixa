@@ -20,10 +20,11 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [streamingText, setStreamingText] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // MVP-001 Additions
+  // MVP-001/002 Additions
   const [conversationHistory, setConversationHistory] = useState<LearningMessage[]>([]);
   const [thinkingStep, setThinkingStep] = useState<'context' | 'intent' | 'explanation' | 'streaming' | 'idle'>('idle');
   const retryCountRef = useRef<number>(0);
+  const accumulatedTextRef = useRef<string>('');
 
   const openPanel = useCallback(() => {
     setPanelState('OPENING');
@@ -86,6 +87,7 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setPanelState('READY');
     setThinkingStep('idle');
     retryCountRef.current = 0;
+    accumulatedTextRef.current = '';
   }, []);
 
   const executeAction = useCallback((action: RecommendedAction) => {
@@ -93,21 +95,21 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setPanelState('THINKING');
     setThinkingStep('context');
     setStreamingText('');
+    accumulatedTextRef.current = '';
     setErrorMessage(null);
+
+    // Save history capture state snapshot
+    let currentHistorySnapshot = [...conversationHistory];
 
     // Add user query to conversation history (if detailed description prompt exists)
     if (action.description) {
-      setConversationHistory((prev) => [
-        ...prev,
-        { role: 'user', text: action.description, timestamp: Date.now() },
-      ]);
+      const userMsg: LearningMessage = { role: 'user', text: action.description, timestamp: Date.now() };
+      currentHistorySnapshot.push(userMsg);
+      setConversationHistory(currentHistorySnapshot);
     }
 
     const startStream = () => {
-      // Step 2: Intent Resolution loader state
       setTimeout(() => setThinkingStep('intent'), 150);
-
-      // Step 3: Explanation Setup loader state
       setTimeout(() => setThinkingStep('explanation'), 350);
 
       StreamingService.streamIntent({
@@ -115,10 +117,16 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         intentId: 'intent_' + action.action_id,
         intentType: action.action_id === 'trace_execution' ? 'CODE_DIFF_TRACE' : 'MICRO_SUMMARY',
         action,
+        contextPayload: {
+          page_title: activeContext?.sanitized_summary || 'Universal Page',
+          cleaned_content: activeContext?.sanitized_summary || '',
+        },
+        conversationHistory: currentHistorySnapshot.map((m) => ({ role: m.role, text: m.text })),
         onToken: (tokenText) => {
           setPanelState('STREAMING');
           setThinkingStep('streaming');
-          setStreamingText((prev) => prev + tokenText);
+          accumulatedTextRef.current += tokenText;
+          setStreamingText(accumulatedTextRef.current);
         },
         onFinal: () => {
           setPanelState('READY');
@@ -128,11 +136,10 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           // Append assistant streamed text back into conversation history memory
           setConversationHistory((prev) => [
             ...prev,
-            { role: 'assistant', text: streamingText, intent_mode: action.action_id, timestamp: Date.now() },
+            { role: 'assistant', text: accumulatedTextRef.current, intent_mode: action.action_id, timestamp: Date.now() },
           ]);
         },
         onError: (err) => {
-          // Automatic 1-time retry logic
           if (retryCountRef.current < 1) {
             retryCountRef.current += 1;
             setThinkingStep('explanation');
@@ -146,9 +153,8 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       });
     };
 
-    // Trigger Stream Flow
     setTimeout(startStream, 500);
-  }, [activeContext, streamingText]);
+  }, [activeContext, conversationHistory]);
 
   // Handle Right Click Context Menu & Selection Dispatch
   useEffect(() => {

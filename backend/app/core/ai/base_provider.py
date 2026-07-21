@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, AsyncGenerator, Dict, Optional
+from typing import Any, AsyncGenerator, Dict, Optional, List
 from pydantic import BaseModel, Field
 
 
@@ -67,6 +67,7 @@ class BaseAIProvider(ABC):
         prompt_text: str,
         context_id: str,
         intent_id: str,
+        conversation_history: Optional[List[Dict[str, str]]] = None,
     ) -> AsyncGenerator[StreamChunk, None]:
         """Streams intent response chunks token-by-token.
 

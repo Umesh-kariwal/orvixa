@@ -6,6 +6,7 @@ export interface StreamIntentOptions {
   intentType: string;
   action: RecommendedAction;
   contextPayload?: Record<string, any>;
+  conversationHistory?: Array<{ role: 'user' | 'assistant'; text: string }>;
   onToken: (token: string) => void;
   onFinal?: (metrics?: any) => void;
   onError?: (err: string) => void;
@@ -34,6 +35,7 @@ export class StreamingService {
           prompt_text: options.action.description,
           provider_hint: 'google_gemini',
           context_payload: options.contextPayload || {},
+          conversation_history: options.conversationHistory || [],
         }),
         signal: this.activeAbortController.signal,
       });

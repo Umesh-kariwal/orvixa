@@ -1,7 +1,7 @@
 import asyncio
 import time
 import uuid
-from typing import Any, AsyncGenerator, Dict, Optional
+from typing import Any, AsyncGenerator, Dict, Optional, List
 from google import genai
 from app.core.ai.base_provider import (
     BaseAIProvider,
@@ -10,6 +10,7 @@ from app.core.ai.base_provider import (
     StreamChunk,
 )
 from app.core.learning.intent_detector import IntentDetector
+from app.core.learning.prompt_builder import LearningPromptBuilder
 from app.core.config import settings
 
 
@@ -57,20 +58,23 @@ class GoogleGeminiProvider(BaseAIProvider):
         prompt_text: str,
         context_id: str,
         intent_id: str,
+        conversation_history: Optional[List[Dict[str, str]]] = None,
     ) -> AsyncGenerator[StreamChunk, None]:
         start_time = time.time()
         first_token_time: Optional[float] = None
         tokens_emitted = 0
 
-        # Detect Pedagogical Intent
+        # 1. Detect Intent and Domain
         learning_intent = IntentDetector.detect_intent(prompt_text or intent_type)
 
-        system_instruction = (
-            f"You are Orvixa Universal AI Learning Copilot. Intent Mode: {learning_intent.intent_mode}, Domain: {learning_intent.domain}. "
-            "Return surgical, structured adaptive learning guidance."
+        # 2. Build Structured Optimized Prompt
+        full_prompt = LearningPromptBuilder.build_prompt(
+            context_payload=context_payload,
+            intent_mode=learning_intent.intent_mode,
+            domain=learning_intent.domain,
+            conversation_history=conversation_history or [],
+            user_question=prompt_text or intent_type,
         )
-
-        full_prompt = f"{system_instruction}\nContext: {context_payload}\nPrompt: {prompt_text}"
 
         if self._client:
             try:
@@ -98,14 +102,14 @@ class GoogleGeminiProvider(BaseAIProvider):
                     chunk_id=str(uuid.uuid4()),
                     context_id=context_id,
                     intent_id=intent_id,
-                    token_text=f"[Gemini Provider Exception: {str(err)}. Fallback active.] ",
+                    token_text=f"[Gemini Provider Error: {str(err)}. Fallback active.] ",
                     is_final=False,
                 )
         else:
-            # Fallback Intent-Driven Pedagogical Learning Stream
+            # Local development fallback when no API key configured
             if learning_intent.intent_mode in ["Explain", "Teach"]:
                 sample_tokens = [
-                    f"✦ **Learning Intent Detected**: {learning_intent.intent_mode} ({learning_intent.domain.capitalize()})\n\n",
+                    f"✦ **Learning Intent**: {learning_intent.intent_mode} ({learning_intent.domain.capitalize()})\n\n",
                     "### 📘 Concept: Binary Search Algorithm\n",
                     "Binary Search is an efficient O(log N) search algorithm that repeatedly divides a sorted array in half to find a target value.\n\n",
                     "```python\n",

@@ -4,6 +4,14 @@ All notable changes to the Orvixa Universal AI Learning & Interview Copilot proj
 
 ---
 
+## [0.5.0] - 2026-07-21
+### Added
+- **MVP Real AI Integration & Production Conversation Engine (MVP-002):**
+  - Connected abstract AI provider to official `google-genai` SDK and Gemini 2.5 Flash.
+  - Implemented structured `LearningPromptBuilder` optimizing prompts for token efficiency.
+  - Enabled conversation history stream parameters maintaining thread memory.
+  - Added robust API error and fallback logging.
+
 ## [0.4.0] - 2026-07-21
 ### Added
 - **MVP Real AI Learning Experience (MVP-001):**
