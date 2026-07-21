@@ -1,4 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
+from pydantic import BaseModel, Field
+from typing import Optional, Dict, Any
 from app.schemas.context import (
     ConfidenceTier,
     ContextIntelligenceResponse,
@@ -8,8 +10,45 @@ from app.core.context.privacy import PIIRedactor
 from app.core.context.adapters import AdapterRegistry
 from app.core.context.intent_engine import MultiStageIntentEngine
 from app.core.context.action_engine import DynamicActionRecommendationEngine
+from app.core.context.universal_engine import UniversalContextEngine
+from app.schemas.learning_context import LearningContextSchema
 
 router = APIRouter(prefix="/context", tags=["Context Intelligence Engine"])
+
+
+class UniversalContextRequest(BaseModel):
+    raw_text: str = Field(..., description="Raw text context gathered from page elements")
+    source_type: str = Field(default="generic_web", description="Context source categorization")
+    url: Optional[str] = None
+    page_title: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+@router.post(
+    "/universal",
+    response_model=LearningContextSchema,
+    status_code=status.HTTP_200_OK,
+    summary="Process context through the Universal Context Understanding Pipeline",
+)
+async def process_universal_context(payload: UniversalContextRequest) -> LearningContextSchema:
+    """Universal Context Engine Endpoint.
+
+    Processes raw text through PII Masking, Boilerplate Removal, Token Compression,
+    and Educational Domain Classification.
+    """
+    try:
+        return UniversalContextEngine.process_context(
+            raw_text=payload.raw_text,
+            source_type=payload.source_type,
+            url=payload.url,
+            page_title=payload.page_title,
+            metadata=payload.metadata,
+        )
+    except Exception as err:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Universal Context processing failed: {str(err)}",
+        )
 
 
 @router.post(

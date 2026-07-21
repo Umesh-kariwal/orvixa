@@ -10,7 +10,8 @@ class PIIRedactor:
     """
 
     PATTERNS = [
-        # Secret API Keys & Access Tokens (safe regex patterns)
+        # Secret API Keys & Access Tokens
+        (re.compile(r"sk-[A-Za-z0-9_\-]{16,}"), "[REDACTED_SECRET]"),
         (re.compile(r"sec_token_[A-Za-z0-9_]{24,}"), "[REDACTED_API_TOKEN]"),
         (re.compile(r"bearer\s+[A-Za-z0-9\-\._~\+\/]+=*", re.IGNORECASE), "Bearer [REDACTED_TOKEN]"),
         
@@ -43,6 +44,22 @@ class PIIRedactor:
                 was_redacted = True
 
         return sanitized, was_redacted
+
+    @classmethod
+    def redact_secrets(cls, text: str) -> Tuple[str, int]:
+        """Redacts secrets and returns (sanitized_text, redaction_count)."""
+        if not text:
+            return "", 0
+
+        sanitized = text
+        count = 0
+        for pattern, replacement in cls.PATTERNS:
+            matches = pattern.findall(sanitized)
+            if matches:
+                count += len(matches)
+                sanitized = pattern.sub(replacement, sanitized)
+
+        return sanitized, count
 
 
 class SensitiveFieldFilter:
