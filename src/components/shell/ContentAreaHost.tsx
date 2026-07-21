@@ -5,6 +5,9 @@ import { Heading, Text } from '@/components/ui/Typography';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { OrvixaIntentRenderer } from '@/components/renderers/OrvixaIntentRenderer';
+import { OnboardingView } from '@/components/views/OnboardingView';
+import { SettingsView } from '@/components/views/SettingsView';
+import { PrivacyDashboard } from '@/components/views/PrivacyDashboard';
 import { Sparkles, AlertCircle, RefreshCw, Trash2, ArrowRight } from 'lucide-react';
 
 export const ContentAreaHost: React.FC = () => {
@@ -15,9 +18,21 @@ export const ContentAreaHost: React.FC = () => {
     errorMessage,
     conversationHistory,
     thinkingStep,
+    currentView,
     resetSession,
     executeAction,
   } = useSidePanel();
+
+  // Route Views based on Current Settings View Selection
+  if (currentView === 'onboarding') {
+    return <OnboardingView />;
+  }
+  if (currentView === 'settings') {
+    return <SettingsView />;
+  }
+  if (currentView === 'privacy') {
+    return <PrivacyDashboard />;
+  }
 
   // Clear Session Action Link
   const renderResetHeader = () => {
@@ -90,15 +105,17 @@ export const ContentAreaHost: React.FC = () => {
     );
   }
 
-  // Error Recovery & Auto-Retry Action
+  // Error Recovery & Auto-Retry Action (Friendly messages)
   if (panelState === 'ERROR') {
     return (
       <div style={{ padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <Card variant="amber">
           <Heading level={4} style={{ color: 'var(--rose-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <AlertCircle size={18} /> Diagnostic Failure
+            <AlertCircle size={18} /> Connection Interrupted
           </Heading>
-          <Text variant="secondary">{errorMessage || 'Session connection interrupted.'}</Text>
+          <Text variant="secondary">
+            {errorMessage || 'Failed to reach the AI server. Please verify your internet connection or check your custom Gemini API key.'}
+          </Text>
         </Card>
         <Button
           variant="glow"
@@ -112,7 +129,7 @@ export const ContentAreaHost: React.FC = () => {
             )
           }
         >
-          One-Click Retry Request
+          Retry Connection
         </Button>
       </div>
     );

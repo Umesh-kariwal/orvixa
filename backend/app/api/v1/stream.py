@@ -23,6 +23,7 @@ class StreamRequestSchema(BaseModel):
     provider_hint: Optional[str] = Field(default="google_gemini", description="Preferred AI provider key")
     context_payload: Dict[str, Any] = Field(default_factory=dict, description="Normalized context payload")
     conversation_history: List[Dict[str, str]] = Field(default_factory=list, description="Short-term conversation history memory")
+    api_key: Optional[str] = Field(default=None, description="Optional custom API key configured by the user")
 
 
 class CancelRequestSchema(BaseModel):
@@ -64,7 +65,7 @@ async def stream_intent(payload: StreamRequestSchema, request: Request):
         request_cancel_id = payload.context_id
 
         try:
-            # Pass conversation history down to stream generator
+            # Pass conversation history and optional custom API key down to stream generator
             async for chunk in provider.stream_intent(
                 context_payload=payload.context_payload,
                 intent_type=payload.intent_type,
@@ -72,6 +73,7 @@ async def stream_intent(payload: StreamRequestSchema, request: Request):
                 context_id=payload.context_id,
                 intent_id=payload.intent_id,
                 conversation_history=payload.conversation_history,
+                custom_api_key=payload.api_key,
             ):
                 # Check for Cancellation
                 if request_cancel_id in cancelled_requests:

@@ -16,6 +16,7 @@ export const SidePanelShell: React.FC = () => {
     floatingPosition,
     setFloatingPosition,
     floatingSize,
+    currentView,
   } = useSidePanel();
 
   const isDraggingRef = useRef<boolean>(false);
@@ -104,6 +105,8 @@ export const SidePanelShell: React.FC = () => {
     return <AmbientTrigger />;
   }
 
+  const isLearning = currentView === 'learning';
+
   // FLOATING MODE STYLES
   if (panelMode === 'floating') {
     return (
@@ -130,11 +133,11 @@ export const SidePanelShell: React.FC = () => {
         <div onMouseDown={handleFloatingHeaderMouseDown} style={{ cursor: 'move' }}>
           <TopBar />
         </div>
-        <ActionPillsRow />
+        {isLearning && <ActionPillsRow />}
         <div style={{ flex: 1, overflowY: 'auto' }}>
           <ContentAreaHost />
         </div>
-        <BottomBar />
+        {isLearning && <BottomBar />}
       </div>
     );
   }
@@ -183,11 +186,11 @@ export const SidePanelShell: React.FC = () => {
         )}
 
         <TopBar />
-        <ActionPillsRow />
+        {isLearning && <ActionPillsRow />}
         <div style={{ flex: 1, overflowY: 'auto' }}>
           <ContentAreaHost />
         </div>
-        <BottomBar />
+        {isLearning && <BottomBar />}
       </div>
     </>
   );

@@ -4,6 +4,16 @@ All notable changes to the Orvixa Universal AI Learning & Interview Copilot proj
 
 ---
 
+## [0.6.0] - 2026-07-21
+### Added
+- **Production Browser Extension & Beta Readiness (MVP-003):**
+  - Designed and built a beautiful, high-aesthetic first-time user onboarding view (`OnboardingView.tsx`).
+  - Implemented client preference persistence storage integration preserving settings and API keys.
+  - Created a professional configuration portal (`SettingsView.tsx`) allowing custom Gemini API keys, dock sizing adjustments, and stickiness toggles.
+  - Added an interactive Privacy Dashboard (`PrivacyDashboard.tsx`) with status checks confirming zero microphone/webcam usage or automatic screen capture.
+  - Integrated customizable UI view toggles directly inside the TopBar control array.
+  - Enhanced error handling providing developer guidelines and configuration troubleshooting aids.
+
 ## [0.5.1] - 2026-07-21
 ### Added
 - **Mandatory Platform Hardening (SP-001):**

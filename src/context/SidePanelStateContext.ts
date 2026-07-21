@@ -13,6 +13,8 @@ export type PanelState =
   | 'OFFLINE'
   | 'SILENT';
 
+export type ActiveView = 'learning' | 'onboarding' | 'settings' | 'privacy';
+
 export interface LearningMessage {
   role: 'user' | 'assistant';
   text: string;
@@ -33,10 +35,12 @@ export interface SidePanelStateContextType {
   streamingText: string;
   errorMessage: string | null;
   
-  // MVP Additions
+  // MVP & Onboarding Additions
   conversationHistory: LearningMessage[];
   thinkingStep: 'context' | 'intent' | 'explanation' | 'streaming' | 'idle';
-  resetSession: () => void;
+  currentView: ActiveView;
+  onboardingCompleted: boolean;
+  customApiKey: string;
 
   // Actions
   openPanel: () => void;
@@ -50,6 +54,10 @@ export interface SidePanelStateContextType {
   togglePin: () => void;
   setActiveContext: (context: ContextIntelligenceResult | null) => void;
   executeAction: (action: RecommendedAction) => void;
+  resetSession: () => void;
+  setCurrentView: (view: ActiveView) => void;
+  completeOnboarding: () => void;
+  saveApiKey: (key: string) => void;
 }
 
 export const SidePanelStateContext = createContext<SidePanelStateContextType | undefined>(undefined);

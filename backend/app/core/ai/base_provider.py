@@ -31,11 +31,7 @@ class StreamChunk(BaseModel):
 
 
 class BaseAIProvider(ABC):
-    """Abstract Base Class for all AI Providers.
-
-    Provider-agnostic interface enforcing identical contracts across Gemini,
-    Claude, OpenAI, DeepSeek, Ollama, and local models.
-    """
+    """Abstract Base Class for all AI Providers."""
 
     @property
     @abstractmethod
@@ -68,6 +64,7 @@ class BaseAIProvider(ABC):
         context_id: str,
         intent_id: str,
         conversation_history: Optional[List[Dict[str, str]]] = None,
+        custom_api_key: Optional[str] = None,
     ) -> AsyncGenerator[StreamChunk, None]:
         """Streams intent response chunks token-by-token.
 

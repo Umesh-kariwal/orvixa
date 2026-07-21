@@ -1,10 +1,12 @@
 export interface OrvixaBrowserPreferences {
   panelMode: 'dock' | 'floating';
-  dockWidth: number; // Percentage or px
+  dockWidth: number;
   floatingPosition: { x: number; y: number };
   floatingSize: { width: number; height: number };
   isPinned: boolean;
   shortcut: string;
+  onboardingCompleted: boolean;
+  customApiKey: string;
 }
 
 const STORAGE_KEY = 'orvixa_browser_preferences_v1';
@@ -16,6 +18,8 @@ const DEFAULT_PREFERENCES: OrvixaBrowserPreferences = {
   floatingSize: { width: 420, height: 600 },
   isPinned: false,
   shortcut: 'Ctrl+K',
+  onboardingCompleted: false,
+  customApiKey: '',
 };
 
 export class StorageService {

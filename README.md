@@ -17,12 +17,12 @@ Instead of forcing users to copy-paste code or context into separate chat interf
 
 ## ⚡ CORE CAPABILITIES
 
-1. **Invisible by Default:** No flashing widgets, no auto-opening sidebars, and no advertisement noise. Summoned only via configurable shortcut (`Ctrl+K` / `Cmd+K`) or Right Click -> `Ask Orvixa`.
-2. **Universal Context Engine:** Cleans noisy DOM elements, masks sensitive PII or credentials, compresses tokens by 35%–45%, and classifies web content into 11 educational categories (e.g. Programming, Physics, Mathematics, English).
-3. **Intent-First Learning Card Runtime:** Automatically resolves the pedagogical mode (Explain, Hint, Teach, Practice, Summarize, Interview) and returns beautiful subject-specific cards instead of long walls of text.
-4. **Resiliency & Performance:** Sub-150ms opening transitions, 60FPS resize drag handles, closed Shadow DOM protection, and real-time SSE token streaming.
-5. **Short-Term Session Memory:** Follow-up questions automatically build on previous context with dynamic, adaptive next-step suggestions.
-6. **Real AI Provider Integration:** Connected cleanly to Gemini 2.5 Flash via structured prompt templates and context memory tracking.
+1. **Invisible by Default:** Summoned only via configurable shortcut (`Ctrl+K` / `Cmd+K`) or Right Click -> `Ask Orvixa`.
+2. **First-Time User Onboarding:** Step-by-step introduction view explaining shortcut keys and permissions.
+3. **Universal Context Engine:** Cleans noisy DOM elements, masks sensitive PII, and classifies web content into 11 educational categories.
+4. **Pedagogical Learning Card Runtime:** Resolves intent mode (Explain, Hint, Teach, Practice) and streams card elements.
+5. **Interactive Privacy Dashboard:** Displays permission checks confirming zero background recording or trackers.
+6. **AI Provider Portal:** Support for custom Gemini API keys, letting users query models serverless.
 
 ---
 
@@ -64,12 +64,13 @@ Orvixa implements a strict **Zero-Trust Input and Privacy Architecture** designe
 | **M13** | Universal Context Understanding Engine V1 | ✅ |
 | **MVP-1** | Real AI Learning Experience MVP (MVP-001) | ✅ |
 | **MVP-2** | Production AI & Conversation Engine MVP (MVP-002) | ✅ |
-| **SP-1** | **Mandatory Platform Hardening (SP-001)** | ✅ |
+| **SP-1** | Mandatory Platform Hardening (SP-001) | ✅ |
+| **MVP-3** | **Production Browser Extension & Beta Readiness (MVP-003)** | ✅ |
 | **M14** | **Adaptive Learning Card Engine (Programming, Physics, English)** | ⏳ *(Next)* |
 
 - **Current Development Phase:** Phase 2 (Universal AI Learning & Mock Interview Platform)
-- **Overall Progress:** `96%`
-- **Repository Version:** `v0.5.1`
+- **Overall Progress:** `100%` (Beta Core Foundation)
+- **Repository Version:** `v0.6.0`
 - **Latest Verification:** `29 / 29 Pytest Tests Passed`, `0 oxlint Errors`
 
 ---
@@ -130,6 +131,14 @@ orvixa/
    ```bash
    npm run build
    ```
+
+### Chrome Developer Mode Installation Guide
+To load and test the extension directly in your browser:
+1. Open Google Chrome and navigate to `chrome://extensions/`.
+2. Enable the **Developer Mode** toggle at the top right of the extensions dashboard.
+3. Click the **Load unpacked** button at the top left.
+4. Select the compiled build output directory `/dist` containing the `manifest.json`.
+5. Open any webpage, press `Ctrl + K` (or `Cmd + K` on macOS) to launch the sidebar onboarding view!
 
 ---
 

@@ -59,10 +59,21 @@ class GoogleGeminiProvider(BaseAIProvider):
         context_id: str,
         intent_id: str,
         conversation_history: Optional[List[Dict[str, str]]] = None,
+        custom_api_key: Optional[str] = None,
     ) -> AsyncGenerator[StreamChunk, None]:
         start_time = time.time()
         first_token_time: Optional[float] = None
         tokens_emitted = 0
+
+        # Resolve active client: custom key takes absolute precedence over global system settings
+        active_client = self._client
+        resolved_key = custom_api_key or self._api_key
+
+        if custom_api_key:
+            try:
+                active_client = genai.Client(api_key=custom_api_key)
+            except Exception:
+                active_client = None
 
         # 1. Detect Intent and Domain
         learning_intent = IntentDetector.detect_intent(prompt_text or intent_type)
@@ -76,9 +87,9 @@ class GoogleGeminiProvider(BaseAIProvider):
             user_question=prompt_text or intent_type,
         )
 
-        if self._client:
+        if active_client and resolved_key:
             try:
-                response = self._client.models.generate_content_stream(
+                response = active_client.models.generate_content_stream(
                     model=self._model,
                     contents=full_prompt,
                 )

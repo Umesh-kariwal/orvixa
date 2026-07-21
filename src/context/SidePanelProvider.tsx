@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { SidePanelStateContext, type PanelState, type LearningMessage } from './SidePanelStateContext';
+import { SidePanelStateContext, type PanelState, type LearningMessage, type ActiveView } from './SidePanelStateContext';
 import type { ContextIntelligenceResult, RecommendedAction } from '@/types/context';
 import { ContextObserverManager } from '@/integration/manager/ContextObserverManager';
 import { StreamingService } from '@/services/streamingService';
@@ -20,9 +20,15 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [streamingText, setStreamingText] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // MVP-001/002 Additions
+  // MVP-001/002/003 Additions
   const [conversationHistory, setConversationHistory] = useState<LearningMessage[]>([]);
   const [thinkingStep, setThinkingStep] = useState<'context' | 'intent' | 'explanation' | 'streaming' | 'idle'>('idle');
+  const [currentView, setCurrentViewState] = useState<ActiveView>(
+    initialPrefs.onboardingCompleted ? 'learning' : 'onboarding'
+  );
+  const [onboardingCompleted, setOnboardingCompleted] = useState<boolean>(initialPrefs.onboardingCompleted);
+  const [customApiKey, setCustomApiKey] = useState<string>(initialPrefs.customApiKey);
+
   const retryCountRef = useRef<number>(0);
   const accumulatedTextRef = useRef<string>('');
 
@@ -90,6 +96,21 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     accumulatedTextRef.current = '';
   }, []);
 
+  const setCurrentView = useCallback((view: ActiveView) => {
+    setCurrentViewState(view);
+  }, []);
+
+  const completeOnboarding = useCallback(() => {
+    setOnboardingCompleted(true);
+    setCurrentViewState('learning');
+    StorageService.savePreferences({ onboardingCompleted: true });
+  }, []);
+
+  const saveApiKey = useCallback((key: string) => {
+    setCustomApiKey(key);
+    StorageService.savePreferences({ customApiKey: key });
+  }, []);
+
   const executeAction = useCallback((action: RecommendedAction) => {
     setSelectedAction(action);
     setPanelState('THINKING');
@@ -98,10 +119,8 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     accumulatedTextRef.current = '';
     setErrorMessage(null);
 
-    // Save history capture state snapshot
     let currentHistorySnapshot = [...conversationHistory];
 
-    // Add user query to conversation history (if detailed description prompt exists)
     if (action.description) {
       const userMsg: LearningMessage = { role: 'user', text: action.description, timestamp: Date.now() };
       currentHistorySnapshot.push(userMsg);
@@ -122,6 +141,7 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           cleaned_content: activeContext?.sanitized_summary || '',
         },
         conversationHistory: currentHistorySnapshot.map((m) => ({ role: m.role, text: m.text })),
+        customApiKey: customApiKey,
         onToken: (tokenText) => {
           setPanelState('STREAMING');
           setThinkingStep('streaming');
@@ -133,7 +153,6 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           setThinkingStep('idle');
           retryCountRef.current = 0;
 
-          // Append assistant streamed text back into conversation history memory
           setConversationHistory((prev) => [
             ...prev,
             { role: 'assistant', text: accumulatedTextRef.current, intent_mode: action.action_id, timestamp: Date.now() },
@@ -154,7 +173,7 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
 
     setTimeout(startStream, 500);
-  }, [activeContext, conversationHistory]);
+  }, [activeContext, conversationHistory, customApiKey]);
 
   // Handle Right Click Context Menu & Selection Dispatch
   useEffect(() => {
@@ -229,6 +248,9 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         errorMessage,
         conversationHistory,
         thinkingStep,
+        currentView,
+        onboardingCompleted,
+        customApiKey,
         resetSession,
         openPanel,
         closePanel,
@@ -241,6 +263,9 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         togglePin,
         setActiveContext,
         executeAction,
+        setCurrentView,
+        completeOnboarding,
+        saveApiKey,
       }}
     >
       {children}
