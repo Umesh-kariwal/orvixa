@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "Orvixa — Intelligence Layer for the Web",
+  "version": "1.0.0",
+  "description": "Universal Context Intelligence Layer embedding into any host platform (GitHub, LeetCode, Docs, Notion, LMS, SaaS).",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_title": "Toggle Orvixa Intelligence Dock (Ctrl+K)"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["contentScript.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/*", "index.html"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
