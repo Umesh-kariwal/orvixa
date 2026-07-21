@@ -4,6 +4,14 @@ All notable changes to the Orvixa Universal AI Learning & Interview Copilot proj
 
 ---
 
+## [0.7.1] - 2026-07-21
+### Fixed
+- **Founder Blocking Issues (FL-002):**
+  - Replaced `createBrowserRouter` with `createHashRouter` to prevent React Router crashing due to origin pushState limitations inside the `chrome-extension://` protocol scope.
+  - Implemented `AppErrorBoundary` root routing fallback, rendering detailed debugger messages and console trace dumps in development, and friendly messages in production.
+  - Resolved `Ctrl+K` browser omnibox override collision by migrating to `Ctrl+Shift+K` (or `Cmd+Shift+K` on macOS) configured as a native Manifest V3 command action.
+  - Added double-redundancy listeners for the `Ctrl+Shift+K` hotkey combination inside `contentScript.ts` and `SidePanelProvider.tsx`.
+
 ## [0.7.0] - 2026-07-21
 ### Added
 - **Engineering Quality, Observability & Beta Validation (MVP-004):**

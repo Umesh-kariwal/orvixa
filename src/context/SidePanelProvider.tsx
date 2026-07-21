@@ -258,8 +258,10 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (e.key === 'Escape' && panelState !== 'COLLAPSED' && panelState !== 'HIDDEN' && !isPinned) {
         closePanel();
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        togglePanel();
+        if (e.shiftKey) {
+          e.preventDefault();
+          togglePanel();
+        }
       }
     };
 

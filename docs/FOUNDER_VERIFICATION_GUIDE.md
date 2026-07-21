@@ -38,7 +38,7 @@ Test the extension against real sites (e.g. Wikipedia, LeetCode, MDN Web Docs):
 
 ### STEP 4: Summons Sidebar
 1. Go to any public web article (e.g., [Wikipedia - Binary Search](https://en.wikipedia.org/wiki/Binary_search_algorithm)).
-2. Press `Ctrl + K` (or `Cmd + K` on macOS).
+2. Press **`Ctrl + Shift + K`** (or **`Cmd + Shift + K`** on macOS).
 3. Verify that the Orvixa sidebar slide-dock transitions smoothly onto the page.
 
 ### STEP 5: Ask a Question

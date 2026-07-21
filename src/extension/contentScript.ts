@@ -47,5 +47,13 @@ declare const chrome: any;
     }
   });
 
+  // Double-redundancy: Listen for shortcut key directly on the host document page
+  window.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      iframe.contentWindow?.postMessage({ source: 'orvixa-content', action: 'toggle' }, '*');
+    }
+  });
+
   console.log('[Orvixa Extension] Sidebar iframe successfully injected.');
 })();
