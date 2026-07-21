@@ -2,10 +2,19 @@ import React from 'react';
 import { useSidePanel } from '@/hooks/useSidePanel';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { X, Maximize2, Minimize2, Settings, ShieldCheck, GraduationCap } from 'lucide-react';
+import { X, Maximize2, Minimize2, Pin, PinOff, Layout, Layers, ShieldCheck, GraduationCap } from 'lucide-react';
 
 export const TopBar: React.FC = () => {
-  const { closePanel, isExpanded, toggleExpand, activeContext } = useSidePanel();
+  const {
+    closePanel,
+    isExpanded,
+    toggleExpand,
+    panelMode,
+    togglePanelMode,
+    isPinned,
+    togglePin,
+    activeContext,
+  } = useSidePanel();
 
   const titleText = activeContext?.sanitized_summary || 'Universal Learning Copilot';
   const confidenceTier = activeContext?.confidence_tier || 'HIGH';
@@ -45,7 +54,7 @@ export const TopBar: React.FC = () => {
             {titleText.length > 22 ? titleText.slice(0, 22) + '...' : titleText}
           </span>
           <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-            Orvixa Learning Layer
+            Orvixa Learning Layer ({panelMode.toUpperCase()})
           </span>
         </div>
       </div>
@@ -58,14 +67,18 @@ export const TopBar: React.FC = () => {
         {confidenceTier} ({Math.round(confidenceScore * 100)}%)
       </Badge>
 
-      {/* Right: Controls (Expand, Settings, Collapse) */}
+      {/* Right: Controls (Pin, Mode, Expand, Collapse) */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-        <Button variant="ghost" size="sm" onClick={toggleExpand} title={isExpanded ? 'Restore Dock' : 'Expand Panel'}>
-          {isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+        <Button variant="ghost" size="sm" onClick={togglePin} title={isPinned ? 'Unpin Panel' : 'Pin Panel'}>
+          {isPinned ? <PinOff size={14} style={{ color: 'var(--amber-primary)' }} /> : <Pin size={14} />}
         </Button>
 
-        <Button variant="ghost" size="sm" title="Orvixa Settings">
-          <Settings size={14} />
+        <Button variant="ghost" size="sm" onClick={togglePanelMode} title={`Switch to ${panelMode === 'dock' ? 'Floating' : 'Dock'} Mode`}>
+          {panelMode === 'dock' ? <Layers size={14} /> : <Layout size={14} />}
+        </Button>
+
+        <Button variant="ghost" size="sm" onClick={toggleExpand} title={isExpanded ? 'Restore Dock' : 'Expand Panel'}>
+          {isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
         </Button>
 
         <Button variant="ghost" size="sm" onClick={closePanel} title="Collapse Panel (Esc)">
