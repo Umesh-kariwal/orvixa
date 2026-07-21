@@ -1,7 +1,7 @@
 import React, { type ButtonHTMLAttributes } from 'react';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'glow';
   size?: 'sm' | 'md' | 'lg';
   children: React.ReactNode;
 }
@@ -11,6 +11,7 @@ export const Button: React.FC<ButtonProps> = ({
   size = 'md',
   children,
   className = '',
+  disabled,
   style,
   ...props
 }) => {
@@ -20,24 +21,29 @@ export const Button: React.FC<ButtonProps> = ({
     justifyContent: 'center',
     fontWeight: 600,
     borderRadius: 'var(--radius-md)',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    opacity: disabled ? 0.6 : 1,
+    transition: 'all var(--motion-fast) var(--easing-default)',
     border: 'none',
-    outline: 'none',
     fontFamily: 'var(--font-sans)',
   };
 
   const sizeStyles: Record<string, React.CSSProperties> = {
-    sm: { padding: '6px 12px', fontSize: '0.875rem' },
-    md: { padding: '10px 18px', fontSize: '0.95rem' },
-    lg: { padding: '14px 24px', fontSize: '1.05rem' },
+    sm: { padding: '6px 12px', fontSize: '0.85rem', height: '32px' },
+    md: { padding: '10px 18px', fontSize: '0.95rem', height: '42px' },
+    lg: { padding: '14px 24px', fontSize: '1.05rem', height: '50px' },
   };
 
   const variantStyles: Record<string, React.CSSProperties> = {
     primary: {
       background: 'var(--brand-gradient)',
       color: '#ffffff',
-      boxShadow: 'var(--shadow-glow)',
+      boxShadow: 'var(--shadow-sm)',
+    },
+    glow: {
+      background: 'var(--brand-gradient)',
+      color: '#ffffff',
+      boxShadow: 'var(--shadow-aura)',
     },
     secondary: {
       backgroundColor: 'var(--bg-surface)',
@@ -63,7 +69,8 @@ export const Button: React.FC<ButtonProps> = ({
         ...variantStyles[variant],
         ...style,
       }}
-      className={className}
+      disabled={disabled}
+      className={`orvixa-focus-ring ${className}`}
       {...props}
     >
       {children}

@@ -4,6 +4,7 @@ export interface CardProps {
   children: React.ReactNode;
   className?: string;
   style?: React.CSSProperties;
+  variant?: 'default' | 'glass' | 'amber' | 'emerald';
   glow?: boolean;
 }
 
@@ -11,21 +12,50 @@ export const Card: React.FC<CardProps> = ({
   children,
   className = '',
   style,
+  variant = 'default',
   glow = false,
 }) => {
-  const cardStyle: React.CSSProperties = {
-    backgroundColor: 'var(--bg-glass)',
-    backdropFilter: 'var(--glass-blur)',
-    border: `1px solid ${glow ? 'var(--border-highlight)' : 'var(--border-color)'}`,
+  const getVariantStyles = (): React.CSSProperties => {
+    switch (variant) {
+      case 'glass':
+        return {
+          backgroundColor: 'var(--bg-glass)',
+          backdropFilter: 'var(--glass-blur)',
+          WebkitBackdropFilter: 'var(--glass-blur)',
+          border: `1px solid ${glow ? 'var(--border-highlight)' : 'var(--border-color)'}`,
+          boxShadow: glow ? 'var(--shadow-aura)' : 'var(--shadow-md)',
+        };
+      case 'amber':
+        return {
+          backgroundColor: 'var(--amber-bg)',
+          border: '1px solid var(--amber-border)',
+          boxShadow: 'var(--shadow-glow-amber)',
+        };
+      case 'emerald':
+        return {
+          backgroundColor: 'var(--emerald-bg)',
+          border: '1px solid var(--emerald-border)',
+          boxShadow: 'var(--shadow-glow-emerald)',
+        };
+      default:
+        return {
+          backgroundColor: 'var(--bg-surface)',
+          border: `1px solid ${glow ? 'var(--border-highlight)' : 'var(--border-color)'}`,
+          boxShadow: glow ? 'var(--shadow-aura)' : 'var(--shadow-sm)',
+        };
+    }
+  };
+
+  const baseCardStyle: React.CSSProperties = {
     borderRadius: 'var(--radius-lg)',
-    padding: '24px',
-    boxShadow: glow ? 'var(--shadow-glow)' : 'var(--shadow-md)',
-    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+    padding: 'var(--space-lg)',
+    transition: 'all var(--motion-normal) var(--easing-default)',
+    ...getVariantStyles(),
     ...style,
   };
 
   return (
-    <div style={cardStyle} className={className}>
+    <div style={baseCardStyle} className={className}>
       {children}
     </div>
   );
