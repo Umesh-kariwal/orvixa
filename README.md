@@ -21,6 +21,7 @@ Instead of forcing users to copy-paste code or context into separate chat interf
 2. **Universal Context Engine:** Cleans noisy DOM elements, masks sensitive PII or credentials, compresses tokens by 35%–45%, and classifies web content into 11 educational categories (e.g. Programming, Physics, Mathematics, English).
 3. **Intent-First Learning Card Runtime:** Automatically resolves the pedagogical mode (Explain, Hint, Teach, Practice, Summarize, Interview) and returns beautiful subject-specific cards instead of long walls of text.
 4. **Resiliency & Performance:** Sub-150ms opening transitions, 60FPS resize drag handles, closed Shadow DOM protection, and real-time SSE token streaming.
+5. **Short-Term Session Memory:** Follow-up questions automatically build on previous context with dynamic, adaptive next-step suggestions.
 
 ---
 
@@ -48,11 +49,12 @@ Instead of forcing users to copy-paste code or context into separate chat interf
 | **M11** | Learning Experience Runtime V1 | ✅ |
 | **M12** | Browser Experience Engine V1 | ✅ |
 | **M13** | Universal Context Understanding Engine V1 | ✅ |
+| **MVP** | **Real AI Learning Experience MVP (MVP-001)** | ✅ |
 | **M14** | **Adaptive Learning Card Engine (Programming, Physics, English)** | ⏳ *(Next)* |
 
 - **Current Development Phase:** Phase 2 (Universal AI Learning & Mock Interview Platform)
-- **Overall Progress:** `81%`
-- **Repository Version:** `v0.3.0`
+- **Overall Progress:** `88%`
+- **Repository Version:** `v0.4.0`
 - **Latest Verification:** `24 / 24 Pytest Tests Passed`, `0 oxlint Errors`
 
 ---

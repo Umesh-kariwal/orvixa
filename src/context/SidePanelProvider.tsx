@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { SidePanelStateContext, type PanelState } from './SidePanelStateContext';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { SidePanelStateContext, type PanelState, type LearningMessage } from './SidePanelStateContext';
 import type { ContextIntelligenceResult, RecommendedAction } from '@/types/context';
 import { ContextObserverManager } from '@/integration/manager/ContextObserverManager';
 import { StreamingService } from '@/services/streamingService';
@@ -19,6 +19,11 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [selectedAction, setSelectedAction] = useState<RecommendedAction | null>(null);
   const [streamingText, setStreamingText] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // MVP-001 Additions
+  const [conversationHistory, setConversationHistory] = useState<LearningMessage[]>([]);
+  const [thinkingStep, setThinkingStep] = useState<'context' | 'intent' | 'explanation' | 'streaming' | 'idle'>('idle');
+  const retryCountRef = useRef<number>(0);
 
   const openPanel = useCallback(() => {
     setPanelState('OPENING');
@@ -74,30 +79,76 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setIsExpanded((prev) => !prev);
   }, []);
 
+  const resetSession = useCallback(() => {
+    setConversationHistory([]);
+    setStreamingText('');
+    setErrorMessage(null);
+    setPanelState('READY');
+    setThinkingStep('idle');
+    retryCountRef.current = 0;
+  }, []);
+
   const executeAction = useCallback((action: RecommendedAction) => {
     setSelectedAction(action);
     setPanelState('THINKING');
+    setThinkingStep('context');
     setStreamingText('');
     setErrorMessage(null);
 
-    StreamingService.streamIntent({
-      contextId: activeContext?.context_id || 'ctx_live',
-      intentId: 'intent_' + action.action_id,
-      intentType: action.action_id === 'trace_execution' ? 'CODE_DIFF_TRACE' : 'MICRO_SUMMARY',
-      action,
-      onToken: (tokenText) => {
-        setPanelState('STREAMING');
-        setStreamingText((prev) => prev + tokenText);
-      },
-      onFinal: () => {
-        setPanelState('READY');
-      },
-      onError: (err) => {
-        setErrorMessage(err);
-        setPanelState('ERROR');
-      },
-    });
-  }, [activeContext]);
+    // Add user query to conversation history (if detailed description prompt exists)
+    if (action.description) {
+      setConversationHistory((prev) => [
+        ...prev,
+        { role: 'user', text: action.description, timestamp: Date.now() },
+      ]);
+    }
+
+    const startStream = () => {
+      // Step 2: Intent Resolution loader state
+      setTimeout(() => setThinkingStep('intent'), 150);
+
+      // Step 3: Explanation Setup loader state
+      setTimeout(() => setThinkingStep('explanation'), 350);
+
+      StreamingService.streamIntent({
+        contextId: activeContext?.context_id || 'ctx_live',
+        intentId: 'intent_' + action.action_id,
+        intentType: action.action_id === 'trace_execution' ? 'CODE_DIFF_TRACE' : 'MICRO_SUMMARY',
+        action,
+        onToken: (tokenText) => {
+          setPanelState('STREAMING');
+          setThinkingStep('streaming');
+          setStreamingText((prev) => prev + tokenText);
+        },
+        onFinal: () => {
+          setPanelState('READY');
+          setThinkingStep('idle');
+          retryCountRef.current = 0;
+
+          // Append assistant streamed text back into conversation history memory
+          setConversationHistory((prev) => [
+            ...prev,
+            { role: 'assistant', text: streamingText, intent_mode: action.action_id, timestamp: Date.now() },
+          ]);
+        },
+        onError: (err) => {
+          // Automatic 1-time retry logic
+          if (retryCountRef.current < 1) {
+            retryCountRef.current += 1;
+            setThinkingStep('explanation');
+            setTimeout(startStream, 500);
+          } else {
+            setErrorMessage(err);
+            setPanelState('ERROR');
+            setThinkingStep('idle');
+          }
+        },
+      });
+    };
+
+    // Trigger Stream Flow
+    setTimeout(startStream, 500);
+  }, [activeContext, streamingText]);
 
   // Handle Right Click Context Menu & Selection Dispatch
   useEffect(() => {
@@ -170,6 +221,9 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         selectedAction,
         streamingText,
         errorMessage,
+        conversationHistory,
+        thinkingStep,
+        resetSession,
         openPanel,
         closePanel,
         togglePanel,

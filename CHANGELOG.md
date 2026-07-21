@@ -4,6 +4,16 @@ All notable changes to the Orvixa Universal AI Learning & Interview Copilot proj
 
 ---
 
+## [0.4.0] - 2026-07-21
+### Added
+- **MVP Real AI Learning Experience (MVP-001):**
+  - Integrated complete end-to-end learning context pipeline flow.
+  - Short-term conversation history memory in the React UI context.
+  - Contextual step loaders displaying progress (analyzing context, intent resolution, etc.).
+  - Adaptive follow-up action buttons at the bottom of the conversation thread.
+  - Automatic error retry and manual one-click retry trigger buttons.
+  - Clean layout updates removing leftover platform branding elements.
+
 ## [0.3.0] - 2026-07-21
 ### Added
 - **Universal Context Understanding Engine V1 (Milestone 13):**

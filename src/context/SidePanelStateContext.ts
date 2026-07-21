@@ -13,6 +13,13 @@ export type PanelState =
   | 'OFFLINE'
   | 'SILENT';
 
+export interface LearningMessage {
+  role: 'user' | 'assistant';
+  text: string;
+  intent_mode?: string;
+  timestamp: number;
+}
+
 export interface SidePanelStateContextType {
   panelState: PanelState;
   widthPercent: number; // Default 35% (min 25%, max 50%)
@@ -25,6 +32,11 @@ export interface SidePanelStateContextType {
   selectedAction: RecommendedAction | null;
   streamingText: string;
   errorMessage: string | null;
+  
+  // MVP Additions
+  conversationHistory: LearningMessage[];
+  thinkingStep: 'context' | 'intent' | 'explanation' | 'streaming' | 'idle';
+  resetSession: () => void;
 
   // Actions
   openPanel: () => void;

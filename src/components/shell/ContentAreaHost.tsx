@@ -3,125 +3,216 @@ import { useSidePanel } from '@/hooks/useSidePanel';
 import { Card } from '@/components/ui/Card';
 import { Heading, Text } from '@/components/ui/Typography';
 import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
 import { OrvixaIntentRenderer } from '@/components/renderers/OrvixaIntentRenderer';
-import { Sparkles, AlertCircle, RefreshCw } from 'lucide-react';
-import type { IntentPayload } from '@/rendering/core/types';
+import { Sparkles, AlertCircle, RefreshCw, Trash2, ArrowRight } from 'lucide-react';
 
 export const ContentAreaHost: React.FC = () => {
-  const { panelState, selectedAction, streamingText, errorMessage, activeContext } = useSidePanel();
+  const {
+    panelState,
+    selectedAction,
+    streamingText,
+    errorMessage,
+    conversationHistory,
+    thinkingStep,
+    resetSession,
+    executeAction,
+  } = useSidePanel();
 
+  // Clear Session Action Link
+  const renderResetHeader = () => {
+    if (conversationHistory.length === 0) return null;
+    return (
+      <div style={{ display: 'flex', justifyContent: 'flex-end', paddingBottom: '12px' }}>
+        <Button variant="ghost" size="sm" onClick={resetSession} style={{ color: 'var(--rose-primary)', gap: '4px' }}>
+          <Trash2 size={13} /> Reset Learning Session
+        </Button>
+      </div>
+    );
+  };
+
+  // Adaptive Follow-up Choices (Dynamic learning path builder)
+  const renderFollowUps = () => {
+    if (panelState !== 'READY' && panelState !== 'IDLE') return null;
+    if (conversationHistory.length === 0) return null;
+
+    const followUpOptions = [
+      { action_id: 'explain', label: 'Explain Deeper', icon: 'book' },
+      { action_id: 'teach', label: 'Give Socratic Clues', icon: 'hint' },
+      { action_id: 'practice', label: 'Show Practice Quiz', icon: 'target' },
+      { action_id: 'interview', label: 'Common Pitfalls & Mistakes', icon: 'users' },
+    ];
+
+    return (
+      <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <Text variant="secondary" style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+          Next Pedagogical Suggestions:
+        </Text>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+          {followUpOptions.map((opt) => (
+            <Button
+              key={opt.action_id}
+              variant="secondary"
+              size="sm"
+              style={{ fontSize: '0.75rem', gap: '4px' }}
+              onClick={() =>
+                executeAction({
+                  action_id: opt.action_id,
+                  label: opt.label,
+                  description: `Follow-up: ${opt.label}`,
+                })
+              }
+            >
+              {opt.label} <ArrowRight size={10} />
+            </Button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Structured Loader Messaging based on active thinking steps
   if (panelState === 'THINKING') {
+    let loaderMessage = 'Analyzing page elements...';
+    if (thinkingStep === 'intent') loaderMessage = 'Detecting domain intent...';
+    if (thinkingStep === 'explanation') loaderMessage = 'Structuring learning cards...';
+
     return (
       <div style={{ padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <Card variant="glass" glow style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <RefreshCw size={20} style={{ animation: 'spin 1s linear infinite', color: 'var(--brand-primary)' }} />
+          <RefreshCw size={20} style={{ animation: 'spin 1.2s linear infinite', color: 'var(--brand-primary)' }} />
           <div>
             <Heading level={4}>Orvixa Learning Engine</Heading>
-            <Text variant="secondary">Analyzing subject query and structuring learning pathway...</Text>
+            <Text variant="secondary">{loaderMessage}</Text>
           </div>
         </Card>
       </div>
     );
   }
 
-  if (panelState === 'STREAMING' || (panelState === 'READY' && streamingText)) {
-    const actionId = selectedAction?.action_id || 'explain';
-
-    // Map intent modes to adaptive learning card layouts
-    let intentType: IntentPayload['intent_type'] = 'SAFE_MARKDOWN';
-    let structuredData: any = { markdown: streamingText };
-
-    if (actionId === 'hint') {
-      intentType = 'SOCRATIC_HINT';
-      structuredData = {
-        hints: [
-          'Level 1: Binary Search splits the array into two search partitions on each step.',
-          'Level 2: Ensure the search array is sorted. If target < array[mid], adjust right pointer.',
-          'Level 3: Ensure right boundary updates to mid - 1 to avoid infinite loop limits.',
-        ],
-      };
-    } else if (actionId === 'practice') {
-      intentType = 'CHECKLIST';
-      structuredData = {
-        items: [
-          'Solve Binary Search on sorted array [-10, -3, 0, 5, 9], target = 9',
-          'Calculate mid pointer indices at each division step',
-          'Identify base cases and boundary exit values',
-        ],
-      };
-    } else if (actionId === 'teach') {
-      intentType = 'TIMELINE';
-      structuredData = {
-        events: [
-          { timestamp: 'Step 1', title: 'Initialization', description: 'Set left = 0, right = length - 1' },
-          { timestamp: 'Step 2', title: 'Mid Calculation', description: 'Compute middle index using integer floor division' },
-          { timestamp: 'Step 3', title: 'Partition Check', description: 'Compare mid value against target and divide search space' },
-        ],
-      };
-    }
-
-    const payload: IntentPayload = {
-      intent_type: intentType,
-      confidence: 0.98,
-      summary: streamingText || 'Learning Guidance Available.',
-      structured_data: structuredData,
-      is_streaming: panelState === 'STREAMING',
-    };
-
-    return (
-      <div style={{ padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        {/* Action Header Badge */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Badge variant="mastery" icon={<Sparkles size={12} />}>
-            {selectedAction?.label || 'AI Guidance'}
-          </Badge>
-          <Text variant="muted">Pedagogical Stream</Text>
-        </div>
-
-        {/* Universal Intent Renderer Runtime Slot */}
-        <OrvixaIntentRenderer rawPayload={payload} isStreaming={panelState === 'STREAMING'} />
-      </div>
-    );
-  }
-
+  // Error Recovery & Auto-Retry Action
   if (panelState === 'ERROR') {
     return (
-      <div style={{ padding: '24px 16px' }}>
+      <div style={{ padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <Card variant="amber">
           <Heading level={4} style={{ color: 'var(--rose-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <AlertCircle size={18} /> Engine Error
+            <AlertCircle size={18} /> Diagnostic Failure
           </Heading>
-          <Text variant="secondary">{errorMessage || 'Pedagogical session interrupted. Fallback active.'}</Text>
+          <Text variant="secondary">{errorMessage || 'Session connection interrupted.'}</Text>
         </Card>
+        <Button
+          variant="glow"
+          onClick={() =>
+            executeAction(
+              selectedAction || {
+                action_id: 'explain',
+                label: 'Explain',
+                description: 'Explain active context',
+              }
+            )
+          }
+        >
+          One-Click Retry Request
+        </Button>
       </div>
     );
   }
 
-  // Default IDLE State
-  const pageTitle = activeContext?.sanitized_summary || 'Active Web Page';
-
   return (
-    <div style={{ padding: '32px 16px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-      <div
-        style={{
-          width: '48px',
-          height: '48px',
-          borderRadius: 'var(--radius-pill)',
-          backgroundColor: 'var(--amber-bg)',
-          border: '1px solid var(--amber-border)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'var(--amber-primary)',
-        }}
-      >
-        <Sparkles size={24} />
-      </div>
+    <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {renderResetHeader()}
 
-      <Heading level={3}>Universal Learning Copilot Active</Heading>
-      <Text variant="secondary" style={{ textAlign: 'center', maxWidth: '300px' }}>
-        Active Page: {pageTitle}. Highlight text to analyze or select a card action above for Socratic hints, practice quizzes, or codebase tutoring.
-      </Text>
+      {/* Render Conversation Thread History */}
+      {conversationHistory.map((msg, index) => {
+        const isUser = msg.role === 'user';
+        return (
+          <div
+            key={index}
+            style={{
+              alignSelf: isUser ? 'flex-end' : 'flex-start',
+              maxWidth: '90%',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px',
+            }}
+          >
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textAlign: isUser ? 'right' : 'left' }}>
+              {isUser ? 'Learner' : 'AI Copilot'}
+            </span>
+            <div
+              style={{
+                padding: '10px 14px',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: isUser ? 'var(--brand-primary)' : 'var(--bg-primary)',
+                color: isUser ? '#ffffff' : 'var(--text-primary)',
+                fontSize: '0.85rem',
+                border: isUser ? 'none' : '1px solid var(--border-color)',
+              }}
+            >
+              {msg.text}
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Render Active Streaming Tokens */}
+      {panelState === 'STREAMING' && (
+        <div style={{ alignSelf: 'flex-start', width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Badge variant="mastery" icon={<Sparkles size={12} />}>
+              {selectedAction?.label || 'Streaming Cards'}
+            </Badge>
+            <Text variant="muted">Live Stream</Text>
+          </div>
+
+          <OrvixaIntentRenderer
+            rawPayload={{
+              intent_type: selectedAction?.action_id === 'hint' ? 'SOCRATIC_HINT' : 'SAFE_MARKDOWN',
+              confidence: 0.98,
+              summary: streamingText,
+              structured_data: { markdown: streamingText },
+              is_streaming: true,
+            }}
+            isStreaming={true}
+          />
+        </div>
+      )}
+
+      {/* Idle / Initial Landing Guide */}
+      {conversationHistory.length === 0 && panelState === 'READY' && (
+        <div
+          style={{
+            padding: '32px 16px',
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '12px',
+          }}
+        >
+          <div
+            style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: 'var(--radius-pill)',
+              backgroundColor: 'var(--amber-bg)',
+              border: '1px solid var(--amber-border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--amber-primary)',
+            }}
+          >
+            <Sparkles size={24} />
+          </div>
+          <Heading level={3}>Orvixa Learning Experience</Heading>
+          <Text variant="secondary" style={{ textAlign: 'center', maxWidth: '300px' }}>
+            Highlight any text or click an action pill above to begin your interactive learning journey.
+          </Text>
+        </div>
+      )}
+
+      {renderFollowUps()}
     </div>
   );
 };
