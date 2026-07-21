@@ -8,6 +8,17 @@ import { ShadowHost } from '@/sdk/ShadowHost';
 import { SidePanelShell } from '@/components/shell/SidePanelShell';
 
 export const AppShell: React.FC = () => {
+  const isExtensionMode = window.location.search.includes('mode=extension');
+
+  if (isExtensionMode) {
+    return (
+      <SidePanelProvider>
+        {/* In extension mode, render the panel layout directly without mock wrappers */}
+        <SidePanelShell />
+      </SidePanelProvider>
+    );
+  }
+
   return (
     <SidePanelProvider>
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>

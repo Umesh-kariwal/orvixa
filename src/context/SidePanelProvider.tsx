@@ -267,6 +267,38 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [panelState, isPinned, closePanel, togglePanel]);
 
+  // Extension mode iframe width postMessage synchronization channel
+  useEffect(() => {
+    const isExtensionMode = window.location.search.includes('mode=extension');
+    if (!isExtensionMode) return;
+
+    let targetWidth = '0px';
+    const isVisible = panelState !== 'COLLAPSED' && panelState !== 'HIDDEN';
+
+    if (isVisible) {
+      targetWidth = isExpanded ? '100vw' : `${widthPercent}vw`;
+    } else {
+      // Keep trigger button width visible so users can summon panel manually
+      targetWidth = '180px';
+    }
+
+    window.parent.postMessage(
+      { source: 'orvixa-copilot', action: 'resize', width: targetWidth },
+      '*'
+    );
+  }, [panelState, widthPercent, isExpanded]);
+
+  // Listen for forwarded toggling events from Content script
+  useEffect(() => {
+    const handleContentToggle = (event: MessageEvent) => {
+      if (event.data && event.data.source === 'orvixa-content' && event.data.action === 'toggle') {
+        togglePanel();
+      }
+    };
+    window.addEventListener('message', handleContentToggle);
+    return () => window.removeEventListener('message', handleContentToggle);
+  }, [togglePanel]);
+
   return (
     <SidePanelStateContext.Provider
       value={{

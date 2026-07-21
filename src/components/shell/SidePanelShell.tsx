@@ -86,10 +86,14 @@ export const SidePanelShell: React.FC = () => {
   );
 
   const isPanelVisible = panelState !== 'COLLAPSED' && panelState !== 'HIDDEN';
-  const effectiveWidth = isExpanded ? '100%' : `${widthPercent}%`;
+  
+  const isExtension = window.location.search.includes('mode=extension');
+  const effectiveWidth = isExtension ? '100%' : (isExpanded ? '100%' : `${widthPercent}%`);
+  const effectivePosition = isExtension ? 'absolute' : 'fixed';
 
   // Auto Layout Shift (Webpage auto-resizes in Dock mode without obscuring page content)
   useEffect(() => {
+    if (isExtension) return; // Do not resize body inside iframe context itself
     if (isPanelVisible && panelMode === 'dock' && !isExpanded) {
       document.body.style.marginRight = `${widthPercent}%`;
       document.body.style.transition = 'margin-right 200ms ease';
@@ -99,7 +103,7 @@ export const SidePanelShell: React.FC = () => {
     return () => {
       document.body.style.marginRight = '0px';
     };
-  }, [isPanelVisible, panelMode, widthPercent, isExpanded]);
+  }, [isPanelVisible, panelMode, widthPercent, isExpanded, isExtension]);
 
   if (!isPanelVisible) {
     return <AmbientTrigger />;
@@ -112,11 +116,12 @@ export const SidePanelShell: React.FC = () => {
     return (
       <div
         style={{
-          position: 'fixed',
-          top: `${floatingPosition.y}px`,
-          left: `${floatingPosition.x}px`,
-          width: `${floatingSize.width}px`,
-          height: `${floatingSize.height}px`,
+          position: effectivePosition,
+          top: isExtension ? '24px' : `${floatingPosition.y}px`,
+          right: isExtension ? '24px' : 'auto',
+          left: isExtension ? 'auto' : `${floatingPosition.x}px`,
+          width: isExtension ? '360px' : `${floatingSize.width}px`,
+          height: isExtension ? 'calc(100vh - 48px)' : `${floatingSize.height}px`,
           backgroundColor: 'var(--bg-glass)',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
@@ -130,7 +135,7 @@ export const SidePanelShell: React.FC = () => {
           overflow: 'hidden',
         }}
       >
-        <div onMouseDown={handleFloatingHeaderMouseDown} style={{ cursor: 'move' }}>
+        <div onMouseDown={handleFloatingHeaderMouseDown} style={{ cursor: isExtension ? 'default' : 'move' }}>
           <TopBar />
         </div>
         {isLearning && <ActionPillsRow />}
@@ -148,17 +153,17 @@ export const SidePanelShell: React.FC = () => {
       <AmbientTrigger />
       <div
         style={{
-          position: 'fixed',
+          position: effectivePosition,
           top: 0,
           right: 0,
           height: '100vh',
           width: effectiveWidth,
-          minWidth: isExpanded ? '100%' : '320px',
-          maxWidth: isExpanded ? '100%' : '50%',
+          minWidth: isExtension ? 'auto' : (isExpanded ? '100%' : '320px'),
+          maxWidth: isExtension ? 'auto' : (isExpanded ? '100%' : '50%'),
           backgroundColor: 'var(--bg-glass)',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
-          borderLeft: '1px solid var(--border-color)',
+          borderLeft: isExtension ? 'none' : '1px solid var(--border-color)',
           boxShadow: 'var(--shadow-dock)',
           zIndex: 999990,
           display: 'flex',
@@ -168,7 +173,7 @@ export const SidePanelShell: React.FC = () => {
         }}
       >
         {/* 60FPS Resizable Left Edge Drag Handle */}
-        {!isExpanded && (
+        {!isExpanded && !isExtension && (
           <div
             onMouseDown={handleMouseDown}
             style={{
