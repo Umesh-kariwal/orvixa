@@ -4,6 +4,15 @@ All notable changes to the Orvixa Universal AI Learning & Interview Copilot proj
 
 ---
 
+## [0.7.5] - 2026-07-22
+### Changed
+- **Context Engine Rebuild (CE-001):**
+  - Redesigned the context pipeline around `CurrentContext` as the Single Source of Truth contract.
+  - Consolidated all host DOM queries and window selection lookups exclusively to the content script (`contentScript.ts`), resolving sandbox iframe address leak issues.
+  - Updated `ContextObserverManager` and all adapters (`GenericWebAdapter`, `GitHubAdapter`, `LeetCodeAdapter`, `NotionAdapter`) to strictly receive and enrich the passed `CurrentContext` payload without query selectors or browser API calls.
+  - Configured prompt generator parameters inside `SidePanelProvider.tsx` using verified `pageContext` fields.
+  - Implemented an expandable **Developer Diagnostics Details View** inside the side panel displaying the raw synced context parameters (visible in local development DEV mode only).
+
 ## [0.7.4] - 2026-07-22
 ### Fixed
 - **Screen Understanding & Product Trust (UX Audit Round 1):**
@@ -44,7 +53,7 @@ All notable changes to the Orvixa Universal AI Learning & Interview Copilot proj
   - Implemented structured JSON logs for backend API requests, adding correlation, request, and session tracking IDs.
   - Integrated regex filters automatically scrubbing API keys, credentials, and PII from execution logs.
   - Added unique client Error IDs (e.g. `ERR-XXXX`) and recovery suggestion mappings.
-  - Designed local benchmarking markers tracking First Open, TTFT, and Stream duration inside the development panel.
+  - Integrated local benchmarking markers tracking First Open, TTFT, and Stream duration inside the development panel.
   - Enforced ARIA labels on TopBar controls for standard accessibility screen-reader support.
 
 ## [0.6.0] - 2026-07-21
