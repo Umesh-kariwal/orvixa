@@ -4,6 +4,15 @@ All notable changes to the Orvixa Universal AI Learning & Interview Copilot proj
 
 ---
 
+## [0.7.4] - 2026-07-22
+### Fixed
+- **Screen Understanding & Product Trust (UX Audit Round 1):**
+  - Resolved Extension Sandbox Context Extraction Bypass by implementing cross-origin `postMessage` synchronization between `contentScript.ts` and the React app. The content script now extracts and pushes host tab URL, title, selected text, and body DOM data directly to `ContextObserverManager` in the iframe.
+  - Resolved `"Active page: orvixa"` and `"Minimal text"` errors. Adapters now evaluate and extract content using the synchronized host tab context instead of the local iframe document.
+  - Implemented custom heuristics classifying: Wikipedia, LeetCode, GitHub, Google Search, YouTube, GeeksForGeeks, API Docs, and Interview Questions.
+  - Added dynamic MCQ Question counter verifying quantitative questions on the screen.
+  - Designed and added a high-fidelity **Screen Understanding Transparency Card** rendered in the sidebar when idle, separating Actually Observed DOM inputs from AI Inferences and providing Low-Confidence warnings.
+
 ## [0.7.3] - 2026-07-22
 ### Fixed
 - **Configuration Trace (ENV-002):**
