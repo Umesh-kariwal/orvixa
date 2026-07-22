@@ -1,3 +1,5 @@
+import type { CurrentContext } from '@/types/context';
+
 export type PlatformCapability =
   | 'SELECTION'
   | 'CODE'
@@ -35,4 +37,5 @@ export interface NormalizedPlatformContext {
   secondarySnippets: ExtractedSnippet[];
   metadata: Record<string, any>;
   timestamp: number;
+  pageContext?: CurrentContext;
 }

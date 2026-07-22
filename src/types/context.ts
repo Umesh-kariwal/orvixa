@@ -24,6 +24,26 @@ export interface NormalizedContextPayload {
   recent_actions?: string[];
 }
 
+export interface CurrentContext {
+  url: string;
+  origin: string;
+  hostname: string;
+  pageTitle: string;
+  pageType: string;
+  platform: string;
+  language: string;
+  selectedText: string;
+  visibleText: string;
+  headings: string[];
+  metadata: Record<string, any>;
+  topic: string;
+  contentType: string;
+  difficulty: string;
+  questionCount: number;
+  confidence: number; // 0.0 - 1.0
+  timestamp: number;
+}
+
 export interface ContextIntelligenceResult {
   context_id?: string;
   timestamp?: number;
@@ -34,6 +54,11 @@ export interface ContextIntelligenceResult {
   side_panel_state: string;
   redacted: boolean;
   sanitized_summary?: string;
+  
+  // Authoritative page context single source of truth
+  pageContext?: CurrentContext;
+
+  // Legacy fields preserved for back-compat
   observed_url?: string;
   observed_title?: string;
   observed_selection?: string;

@@ -87,14 +87,88 @@ export const ContentAreaHost: React.FC = () => {
     );
   };
 
+  // Developer Diagnostics collapsible view (visible in DEV mode only)
+  const renderDevDiagnostics = () => {
+    if (!import.meta.env.DEV || !activeContext?.pageContext) return null;
+
+    return (
+      <details style={{
+        marginTop: '12px',
+        padding: '8px 12px',
+        borderRadius: 'var(--radius-sm)',
+        border: '1px solid var(--border-color)',
+        backgroundColor: 'rgba(255,255,255,0.02)',
+        fontSize: '0.7rem',
+        fontFamily: 'monospace',
+        color: 'var(--text-muted)'
+      }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 700, color: 'var(--text-primary)', userSelect: 'none' }}>
+          🛠️ Developer Diagnostics (DEV Mode)
+        </summary>
+        <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div>
+            <strong>URL:</strong> {activeContext.pageContext.url}
+          </div>
+          <div>
+            <strong>Origin:</strong> {activeContext.pageContext.origin}
+          </div>
+          <div>
+            <strong>Platform:</strong> {activeContext.pageContext.platform}
+          </div>
+          <div>
+            <strong>Page Type:</strong> {activeContext.pageContext.pageType}
+          </div>
+          <div>
+            <strong>Language:</strong> {activeContext.pageContext.language}
+          </div>
+          <div>
+            <strong>Visible Text Length:</strong> {activeContext.pageContext.visibleText.length} chars
+          </div>
+          <div>
+            <strong>Selection Length:</strong> {activeContext.pageContext.selectedText.length} chars
+          </div>
+          <div>
+            <strong>Headings ({activeContext.pageContext.headings.length}):</strong>
+            <ul style={{ margin: '4px 0 0 12px', padding: 0 }}>
+              {activeContext.pageContext.headings.slice(0, 5).map((h, i) => (
+                <li key={i}>{h}</li>
+              ))}
+              {activeContext.pageContext.headings.length > 5 && <li>...</li>}
+            </ul>
+          </div>
+          <div>
+            <strong>Metadata Heuristics:</strong>
+            <pre style={{ margin: '4px 0 0 0', fontSize: '0.65rem', overflowX: 'auto', padding: '6px', borderRadius: '4px', backgroundColor: 'rgba(0,0,0,0.3)' }}>
+              {JSON.stringify(activeContext.pageContext.metadata, null, 2)}
+            </pre>
+          </div>
+        </div>
+      </details>
+    );
+  };
+
   // Render Screen Understanding Transparency Card
   const renderScreenContextCard = () => {
     if (!activeContext) return null;
     
-    const isLowConfidence = activeContext.confidence_tier === 'LOW';
-    const isSelectionActive = !!activeContext.observed_selection;
-    const bodyCharCount = activeContext.observed_body_length || 0;
-    
+    // Extract authoritative properties strictly from pageContext single source of truth
+    const ctx = activeContext.pageContext || {
+      url: activeContext.observed_url || 'Unknown',
+      pageTitle: activeContext.observed_title || 'Unknown',
+      selectedText: activeContext.observed_selection || '',
+      visibleText: '',
+      topic: activeContext.inferred_topic || 'General Topic',
+      platform: activeContext.inferred_category || 'generic',
+      questionCount: activeContext.metadata?.mcqCount || 0,
+      confidence: activeContext.confidence_score || 0.5,
+    };
+
+    const isLowConfidence = ctx.confidence < 0.35;
+    const isSelectionActive = !!ctx.selectedText;
+    const bodyCharCount = ctx.visibleText ? ctx.visibleText.length : (activeContext.observed_body_length || 0);
+    const confidencePercent = Math.round(ctx.confidence * 100);
+    const confidenceTierLabel = ctx.confidence >= 0.85 ? 'HIGH' : ctx.confidence >= 0.6 ? 'MEDIUM' : 'LOW';
+
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', margin: '8px 0' }}>
         <Card variant="glass" glow={!isLowConfidence}>
@@ -110,7 +184,7 @@ export const ContentAreaHost: React.FC = () => {
               backgroundColor: isLowConfidence ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
               color: isLowConfidence ? 'var(--rose-primary)' : 'var(--emerald-primary)'
             }}>
-              {activeContext.confidence_tier} ({Math.round(activeContext.confidence_score * 100)}%)
+              {confidenceTierLabel} ({confidencePercent}%)
             </span>
           </div>
 
@@ -121,16 +195,16 @@ export const ContentAreaHost: React.FC = () => {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
               <div>
-                <strong style={{ color: 'var(--text-muted)' }}>URL:</strong> {activeContext.observed_url || 'Unknown'}
+                <strong style={{ color: 'var(--text-muted)' }}>URL:</strong> {ctx.url}
               </div>
               <div>
-                <strong style={{ color: 'var(--text-muted)' }}>Page Title:</strong> {activeContext.observed_title || 'Unknown'}
+                <strong style={{ color: 'var(--text-muted)' }}>Page Title:</strong> {ctx.pageTitle}
               </div>
               <div>
                 <strong style={{ color: 'var(--text-muted)' }}>Active Selection:</strong>{' '}
                 {isSelectionActive ? (
                   <span style={{ color: 'var(--amber-primary)', fontStyle: 'italic' }}>
-                    "{activeContext.observed_selection?.slice(0, 80)}..."
+                    "{ctx.selectedText.slice(0, 80)}..."
                   </span>
                 ) : (
                   <span style={{ color: 'var(--text-muted)' }}>None (Highlight page text to auto-sync)</span>
@@ -151,16 +225,16 @@ export const ContentAreaHost: React.FC = () => {
               <div>
                 <strong style={{ color: 'var(--text-muted)' }}>Detected Topic:</strong>{' '}
                 <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
-                  {activeContext.inferred_topic || 'Universal Learning'}
+                  {ctx.topic}
                 </span>
               </div>
               <div>
                 <strong style={{ color: 'var(--text-muted)' }}>Content Category:</strong>{' '}
-                <span style={{ textTransform: 'capitalize' }}>{activeContext.inferred_category || 'General'}</span>
+                <span style={{ textTransform: 'capitalize' }}>{ctx.platform}</span>
               </div>
-              {activeContext.inferred_category === 'aptitude' || activeContext.observed_title?.toLowerCase().includes('ssc') ? (
+              {ctx.platform === 'aptitude' || ctx.pageTitle.toLowerCase().includes('ssc') ? (
                 <div>
-                  <strong style={{ color: 'var(--text-muted)' }}>Visible MCQs:</strong> {activeContext.metadata?.mcqCount || 2} questions
+                  <strong style={{ color: 'var(--text-muted)' }}>Visible MCQs:</strong> {ctx.questionCount || 0} questions
                 </div>
               ) : null}
             </div>
@@ -182,6 +256,9 @@ export const ContentAreaHost: React.FC = () => {
               <span>🛡️ Trust Verified: Context extracted directly from active document DOM. No hallucinations present.</span>
             )}
           </div>
+
+          {/* 4. Developer Diagnostics (collapsible, visible in dev mode only) */}
+          {renderDevDiagnostics()}
         </Card>
       </div>
     );

@@ -1,4 +1,5 @@
 import type { PlatformCapability, PlatformInfo, NormalizedPlatformContext } from './types';
+import type { CurrentContext } from '@/types/context';
 
 export abstract class BasePlatformAdapter {
   /**
@@ -30,7 +31,7 @@ export abstract class BasePlatformAdapter {
   /**
    * Extracts and normalizes current page state into universal context schema.
    */
-  public abstract extractContext(url: string, document: Document, hostContext?: any): NormalizedPlatformContext;
+  public abstract extractContext(url: string, document: Document, hostContext?: CurrentContext): NormalizedPlatformContext;
 
   /**
    * Returns true if adapter supports specified capability.
@@ -42,13 +43,13 @@ export abstract class BasePlatformAdapter {
   /**
    * Utility to construct initial platform metadata.
    */
-  protected createPlatformInfo(confidence: number, category: PlatformInfo['category'] = 'generic'): PlatformInfo {
+  protected createPlatformInfo(confidence: number, category: PlatformInfo['category'] = 'generic', activeUrl: string): PlatformInfo {
     return {
       platformId: this.adapterId,
       name: this.name,
       category,
       confidence,
-      activeUrl: window.location.href,
+      activeUrl,
     };
   }
 }

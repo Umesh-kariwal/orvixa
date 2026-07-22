@@ -1,5 +1,6 @@
 // Chrome Extension Content Script
-// Injects Orvixa Sidebar iframe and coordinates window postMessage dimensions, host page layout shifts, and context synchronization.
+// Authoritative single DOM context extraction entry point.
+// Collects all document, window, headings, selection, and metadata signals into a unified CurrentContext object.
 declare const chrome: any;
 
 (() => {
@@ -30,28 +31,71 @@ declare const chrome: any;
 
   hostDiv.appendChild(iframe);
 
-  // Gathers and forwards high-fidelity host document context to the sandboxed sidebar iframe
+  // Authoritative Context Extraction routine
   const sendContextToIframe = () => {
-    let leetcodeTitle = document.querySelector('div[class*="title"], [data-cy="question-title"]')?.textContent?.trim() || '';
+    const url = window.location.href;
+    const origin = window.location.origin;
+    const hostname = window.location.hostname;
+    const pageTitle = document.title || '';
+    const language = document.documentElement.lang || 'en';
+    const selectedText = window.getSelection()?.toString() || '';
+    const visibleText = document.body ? document.body.innerText : '';
+    
+    const headings = Array.from(document.querySelectorAll('h1, h2, h3, h4'))
+      .map((el) => el.textContent?.trim() || '')
+      .filter((txt) => txt.length > 0);
+
+    // Platform-specific elements
+    const leetcodeTitle = document.querySelector('div[class*="title"], [data-cy="question-title"]')?.textContent?.trim() || '';
     let githubRepo = '';
-    if (window.location.hostname.includes('github.com')) {
+    if (hostname.includes('github.com')) {
       githubRepo = window.location.pathname.split('/').slice(1, 3).join('/');
     }
     const metaDescription = document.querySelector('meta[name="description"]')?.getAttribute('content') || '';
+    const ogTitle = document.querySelector('meta[property="og:title"]')?.getAttribute('content') || '';
+    const ogDescription = document.querySelector('meta[property="og:description"]')?.getAttribute('content') || '';
 
-    const contextPayload = {
+    // Determine platform ID matching Resolve heuristics
+    let platform = 'generic';
+    if (hostname.includes('github.com')) {
+      platform = 'github';
+    } else if (hostname.includes('leetcode.com')) {
+      platform = 'leetcode';
+    } else if (hostname.includes('notion.so') || hostname.includes('notion.site')) {
+      platform = 'notion';
+    }
+
+    const currentContext = {
+      url,
+      origin,
+      hostname,
+      pageTitle,
+      pageType: platform,
+      platform,
+      language,
+      selectedText,
+      visibleText,
+      headings,
+      metadata: {
+        leetcodeTitle,
+        githubRepo,
+        metaDescription,
+        ogTitle,
+        ogDescription,
+      },
+      topic: '',
+      contentType: '',
+      difficulty: '',
+      questionCount: 0,
+      confidence: 1.0,
+      timestamp: Date.now(),
+    };
+
+    iframe.contentWindow?.postMessage({
       source: 'orvixa-content',
       action: 'context_update',
-      url: window.location.href,
-      title: document.title,
-      selection: window.getSelection()?.toString() || '',
-      bodyText: document.body.innerText,
-      hostname: window.location.hostname,
-      leetcodeTitle,
-      githubRepo,
-      metaDescription
-    };
-    iframe.contentWindow?.postMessage(contextPayload, '*');
+      context: currentContext
+    }, '*');
   };
 
   // Sync context on tab load immediately
@@ -113,5 +157,5 @@ declare const chrome: any;
     }
   });
 
-  console.log('[Orvixa Extension] Sidebar iframe successfully injected with context sync.');
+  console.log('[Orvixa Extension] Context Engine extraction layer successfully initialized.');
 })();
