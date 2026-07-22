@@ -44,6 +44,20 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const requestStartTimeRef = useRef<number>(0);
   const isFirstTokenRef = useRef<boolean>(true);
 
+  // Load async chrome.storage.local preferences on mount
+  useEffect(() => {
+    StorageService.loadAsyncPreferences().then((asyncPrefs) => {
+      setWidthPercentState(asyncPrefs.dockWidth);
+      setPanelMode(asyncPrefs.panelMode);
+      setFloatingPositionState(asyncPrefs.floatingPosition);
+      setFloatingSizeState(asyncPrefs.floatingSize);
+      setIsPinned(asyncPrefs.isPinned);
+      setOnboardingCompleted(asyncPrefs.onboardingCompleted);
+      setCustomApiKey(asyncPrefs.customApiKey);
+      setCurrentViewState(asyncPrefs.onboardingCompleted ? 'learning' : 'onboarding');
+    });
+  }, []);
+
   const openPanel = useCallback(() => {
     openTimeRef.current = performance.now();
     setPanelState('OPENING');

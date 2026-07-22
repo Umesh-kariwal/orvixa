@@ -5,8 +5,12 @@ const STORAGE_KEY = 'orvixa_theme_preference';
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<Theme>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return (saved as Theme) || 'system';
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return (saved as Theme) || 'system';
+    } catch {
+      return 'system';
+    }
   });
 
   const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>('dark');
@@ -32,11 +36,17 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
+    return () => {
+      mediaQuery.removeEventListener('change', handleChange);
+    };
   }, [theme]);
 
   const setTheme = (newTheme: Theme) => {
-    localStorage.setItem(STORAGE_KEY, newTheme);
+    try {
+      localStorage.setItem(STORAGE_KEY, newTheme);
+    } catch (e) {
+      console.warn('[ThemeProvider] localStorage write failed, fallback active:', e);
+    }
     setThemeState(newTheme);
   };
 

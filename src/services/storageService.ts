@@ -17,29 +17,63 @@ const DEFAULT_PREFERENCES: OrvixaBrowserPreferences = {
   floatingPosition: { x: 100, y: 100 },
   floatingSize: { width: 420, height: 600 },
   isPinned: false,
-  shortcut: 'Ctrl+K',
+  shortcut: 'Ctrl+Shift+K',
   onboardingCompleted: false,
   customApiKey: '',
 };
 
+declare const chrome: any;
+
 export class StorageService {
+  private static inMemoryPrefs: OrvixaBrowserPreferences = { ...DEFAULT_PREFERENCES };
+  private static initialized = false;
+
   public static getPreferences(): OrvixaBrowserPreferences {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? { ...DEFAULT_PREFERENCES, ...JSON.parse(stored) } : DEFAULT_PREFERENCES;
-    } catch {
-      return DEFAULT_PREFERENCES;
+    if (!this.initialized) {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          this.inMemoryPrefs = { ...DEFAULT_PREFERENCES, ...JSON.parse(stored) };
+        }
+      } catch {
+        // Fallback silently if localStorage is blocked
+      }
+      this.initialized = true;
     }
+    return this.inMemoryPrefs;
   }
 
   public static savePreferences(prefs: Partial<OrvixaBrowserPreferences>): OrvixaBrowserPreferences {
+    const current = this.getPreferences();
+    const updated = { ...current, ...prefs };
+    this.inMemoryPrefs = updated;
+
     try {
-      const current = this.getPreferences();
-      const updated = { ...current, ...prefs };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      return updated;
     } catch {
-      return DEFAULT_PREFERENCES;
+      // Ignored if blocked
     }
+
+    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+      chrome.storage.local.set({ [STORAGE_KEY]: updated });
+    }
+
+    return updated;
+  }
+
+  public static async loadAsyncPreferences(): Promise<OrvixaBrowserPreferences> {
+    return new Promise((resolve) => {
+      if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+        chrome.storage.local.get([STORAGE_KEY], (result: any) => {
+          if (result && result[STORAGE_KEY]) {
+            this.inMemoryPrefs = { ...DEFAULT_PREFERENCES, ...result[STORAGE_KEY] };
+            this.initialized = true;
+          }
+          resolve(this.inMemoryPrefs);
+        });
+      } else {
+        resolve(this.getPreferences());
+      }
+    });
   }
 }

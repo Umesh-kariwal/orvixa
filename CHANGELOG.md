@@ -4,6 +4,14 @@ All notable changes to the Orvixa Universal AI Learning & Interview Copilot proj
 
 ---
 
+## [0.7.2] - 2026-07-22
+### Fixed
+- **Extension Runtime Debugging (CBF-001):**
+  - Resolved `"Could not establish connection. Receiving end does not exist"` by wrapping service worker commands, dynamically injecting `contentScript.js` using `chrome.scripting.executeScript` when no content script listeners are running on the tab.
+  - Avoided third-party iframe `localStorage` SecurityError DOMException blocks by wrapping `ThemeProvider` and `StorageService` references in `try-catch` structures.
+  - Enhanced state hydration on extension mount by adding an asynchronous `chrome.storage.local` fetch mechanism inside `StorageService`.
+  - Registered `GlobalErrorBoundary` on the React mount tree in `main.tsx` capturing and formatting React rendering crashes outside the router.
+
 ## [0.7.1] - 2026-07-21
 ### Fixed
 - **Founder Blocking Issues (FL-002):**
