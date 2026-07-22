@@ -3,9 +3,9 @@
 
 Write-Host "🚀 Starting Orvixa Local Development Suite..." -ForegroundColor Cyan
 
-# 1. Start Backend in a new window
+# 1. Start Backend in a new window (bypassing Execution Policy activate constraints)
 Write-Host "⚡ Starting Backend API Server on http://localhost:8000..." -ForegroundColor Yellow
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd backend; .\venv\Scripts\activate; uvicorn app.main:app --port 8000 --reload"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd backend; .\venv\Scripts\python -m uvicorn app.main:app --port 8000 --reload"
 
 # 2. Start Frontend in a new window
 Write-Host "⚡ Starting Frontend Dev Server on http://localhost:5173..." -ForegroundColor Yellow
