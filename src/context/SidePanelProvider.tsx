@@ -79,6 +79,7 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (next === 'HIDDEN') {
         StreamingService.cancelActiveStream();
       } else {
+        window.parent.postMessage({ source: 'orvixa-copilot', action: 'request_context' }, '*');
         openTimeRef.current = performance.now();
         setTimeout(() => {
           const openDuration = performance.now() - openTimeRef.current;
@@ -254,6 +255,12 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           side_panel_state: 'READY',
           redacted: true,
           sanitized_summary: normalized.summary,
+          observed_url: normalized.platform.activeUrl,
+          observed_title: normalized.title,
+          observed_selection: normalized.primarySnippet?.content,
+          observed_body_length: normalized.metadata.bodyLength,
+          inferred_topic: normalized.metadata.detectedTopic || normalized.title,
+          inferred_category: normalized.platform.category,
           recommended_actions: [
             { action_id: 'explain', label: 'Explain', description: 'Explain active concept', icon: 'book' },
             { action_id: 'hint', label: 'Hint', description: 'Socratic hint ladder', icon: 'hint' },

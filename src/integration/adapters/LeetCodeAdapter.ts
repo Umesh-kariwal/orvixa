@@ -20,7 +20,7 @@ export class LeetCodeAdapter extends BasePlatformAdapter {
     return Math.min(1.0, score);
   }
 
-  public extractContext(url: string, doc: Document): NormalizedPlatformContext {
+  public extractContext(url: string, doc: Document, _hostContext?: any): NormalizedPlatformContext {
     const confidence = this.match(url, doc);
     const selection = SelectionExtractor.extract();
     const codeSnippet = EditorExtractor.extract(doc);

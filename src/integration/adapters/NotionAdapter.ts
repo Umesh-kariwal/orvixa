@@ -19,7 +19,7 @@ export class NotionAdapter extends BasePlatformAdapter {
     return Math.min(1.0, score);
   }
 
-  public extractContext(url: string, doc: Document): NormalizedPlatformContext {
+  public extractContext(url: string, doc: Document, _hostContext?: any): NormalizedPlatformContext {
     const confidence = this.match(url, doc);
     const selection = SelectionExtractor.extract();
     const pageTitle = doc.querySelector('.notion-page-block [contenteditable="true"], title')?.textContent?.trim() || 'Notion Page';

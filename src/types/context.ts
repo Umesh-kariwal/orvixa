@@ -34,4 +34,11 @@ export interface ContextIntelligenceResult {
   side_panel_state: string;
   redacted: boolean;
   sanitized_summary?: string;
+  observed_url?: string;
+  observed_title?: string;
+  observed_selection?: string;
+  observed_body_length?: number;
+  inferred_topic?: string;
+  inferred_category?: string;
+  metadata?: Record<string, any>;
 }

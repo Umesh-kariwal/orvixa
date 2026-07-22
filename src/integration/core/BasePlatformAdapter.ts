@@ -30,7 +30,7 @@ export abstract class BasePlatformAdapter {
   /**
    * Extracts and normalizes current page state into universal context schema.
    */
-  public abstract extractContext(url: string, document: Document): NormalizedPlatformContext;
+  public abstract extractContext(url: string, document: Document, hostContext?: any): NormalizedPlatformContext;
 
   /**
    * Returns true if adapter supports specified capability.
