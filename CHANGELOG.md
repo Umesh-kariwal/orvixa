@@ -4,6 +4,13 @@ All notable changes to the Orvixa Universal AI Learning & Interview Copilot proj
 
 ---
 
+## [0.7.3] - 2026-07-22
+### Fixed
+- **Configuration Trace (ENV-002):**
+  - Resolved `.env` file load bypass by explicitly calling `dotenv.load_dotenv()` with resolved absolute paths inside `backend/app/core/config.py` and `backend/app/core/ai/config.py`.
+  - Corrected default model typos in both Pydantic configurations and fallbacks, migrating from deprecated models to Google’s active **`gemini-3.6-flash`** workhorse.
+  - Eliminated port 8000 lock issues by terminating stale background processes.
+
 ## [0.7.2] - 2026-07-22
 ### Fixed
 - **Extension Runtime Debugging (CBF-001):**

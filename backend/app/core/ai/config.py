@@ -1,14 +1,21 @@
 import os
+from pathlib import Path
 from typing import Optional
+from dotenv import load_dotenv
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Align environment load authoritatively
+BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
+env_path = BASE_DIR / ".env"
+load_dotenv(dotenv_path=env_path)
 
 
 class AISettings(BaseSettings):
     """Configuration contract for AI engine settings."""
 
     DEFAULT_PROVIDER: str = Field(default="gemini", description="Default active LLM provider name")
-    DEFAULT_MODEL_NAME: str = Field(default="gemini-2.5-flash", description="Default active model identifier")
+    DEFAULT_MODEL_NAME: str = Field(default="gemini-3.6-flash", description="Default active model identifier")
     GEMINI_API_KEY: Optional[str] = Field(
         default=None, description="Google Gemini API key loaded from environment"
     )

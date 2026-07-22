@@ -1,5 +1,7 @@
 import os
+import sys
 from datetime import datetime, timezone
+from pathlib import Path
 from fastapi import APIRouter, Depends
 from google import genai
 from app.api.deps import get_settings
@@ -53,7 +55,7 @@ async def get_diagnostics(current_settings: Settings = Depends(get_settings)):
             # Run active dry-run generate_content test against Google servers
             client = genai.Client(api_key=key)
             response = client.models.generate_content(
-                model=current_settings.GEMINI_MODEL or "gemini-2.5-flash",
+                model=current_settings.GEMINI_MODEL or "gemini-3.6-flash",
                 contents="test connection"
             )
             if response.text:
@@ -70,4 +72,6 @@ async def get_diagnostics(current_settings: Settings = Depends(get_settings)):
         "api_key_valid": key_valid,
         "model_configured": current_settings.GEMINI_MODEL,
         "error_message": error_msg,
+        "config_module_file": sys.modules[current_settings.__class__.__module__].__file__ if current_settings.__class__.__module__ in sys.modules else "Unknown",
+        "sys_path": sys.path,
     }
