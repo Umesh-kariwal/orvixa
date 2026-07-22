@@ -1,5 +1,5 @@
 // Chrome Extension Content Script
-// Injects Orvixa Sidebar iframe and coordinates window postMessage dimensions.
+// Injects Orvixa Sidebar iframe and coordinates window postMessage dimensions and host page layout shifts.
 declare const chrome: any;
 
 (() => {
@@ -36,6 +36,22 @@ declare const chrome: any;
       const { action, width } = event.data;
       if (action === 'resize') {
         iframe.style.width = width;
+
+        // Bypasses click blocking by forcing width to 0 when collapsed/hidden
+        if (width === '0px' || width === '180px') {
+          iframe.style.pointerEvents = 'none';
+        } else {
+          iframe.style.pointerEvents = 'auto';
+        }
+
+        // Host page layout workspace shift (resizes webpage smoothly so content is not blocked)
+        if (width !== '0px' && width !== '180px' && width !== '100vw') {
+          document.body.style.transition = 'margin-right 200ms cubic-bezier(0.16, 1, 0.3, 1)';
+          document.body.style.marginRight = width;
+        } else {
+          document.body.style.transition = 'margin-right 200ms cubic-bezier(0.16, 1, 0.3, 1)';
+          document.body.style.marginRight = '0px';
+        }
       }
     }
   });

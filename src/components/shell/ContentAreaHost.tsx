@@ -156,18 +156,33 @@ export const ContentAreaHost: React.FC = () => {
             <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textAlign: isUser ? 'right' : 'left' }}>
               {isUser ? 'Learner' : 'AI Copilot'}
             </span>
-            <div
-              style={{
-                padding: '10px 14px',
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: isUser ? 'var(--brand-primary)' : 'var(--bg-primary)',
-                color: isUser ? '#ffffff' : 'var(--text-primary)',
-                fontSize: '0.85rem',
-                border: isUser ? 'none' : '1px solid var(--border-color)',
-              }}
-            >
-              {msg.text}
-            </div>
+            {isUser ? (
+              <div
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: 'var(--radius-md)',
+                  backgroundColor: 'var(--brand-primary)',
+                  color: '#ffffff',
+                  fontSize: '0.85rem',
+                  border: 'none',
+                }}
+              >
+                {msg.text}
+              </div>
+            ) : (
+              <div style={{ width: '100%' }}>
+                <OrvixaIntentRenderer
+                  rawPayload={{
+                    intent_type: 'SAFE_MARKDOWN',
+                    confidence: 0.98,
+                    summary: msg.text,
+                    structured_data: { markdown: msg.text },
+                    is_streaming: false,
+                  }}
+                  isStreaming={false}
+                />
+              </div>
+            )}
           </div>
         );
       })}

@@ -8,7 +8,7 @@ import { StorageService } from '@/services/storageService';
 export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const initialPrefs = StorageService.getPreferences();
 
-  const [panelState, setPanelState] = useState<PanelState>('READY');
+  const [panelState, setPanelState] = useState<PanelState>('HIDDEN');
   const [widthPercent, setWidthPercentState] = useState<number>(initialPrefs.dockWidth);
   const [panelMode, setPanelMode] = useState<'dock' | 'floating'>(initialPrefs.panelMode);
   const [floatingPosition, setFloatingPositionState] = useState<{ x: number; y: number }>(initialPrefs.floatingPosition);
@@ -69,14 +69,14 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, []);
 
   const closePanel = useCallback(() => {
-    setPanelState('COLLAPSED');
+    setPanelState('HIDDEN');
     StreamingService.cancelActiveStream();
   }, []);
 
   const togglePanel = useCallback(() => {
     setPanelState((prev) => {
-      const next = prev === 'COLLAPSED' || prev === 'HIDDEN' ? 'READY' : 'COLLAPSED';
-      if (next === 'COLLAPSED') {
+      const next = prev === 'COLLAPSED' || prev === 'HIDDEN' ? 'READY' : 'HIDDEN';
+      if (next === 'HIDDEN') {
         StreamingService.cancelActiveStream();
       } else {
         openTimeRef.current = performance.now();
@@ -294,8 +294,7 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (isVisible) {
       targetWidth = isExpanded ? '100vw' : `${widthPercent}vw`;
     } else {
-      // Keep trigger button width visible so users can summon panel manually
-      targetWidth = '180px';
+      targetWidth = '0px';
     }
 
     window.parent.postMessage(

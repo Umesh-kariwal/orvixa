@@ -4,7 +4,6 @@ import { TopBar } from './TopBar';
 import { ActionPillsRow } from './ActionPillsRow';
 import { ContentAreaHost } from './ContentAreaHost';
 import { BottomBar } from './BottomBar';
-import { AmbientTrigger } from './AmbientTrigger';
 
 export const SidePanelShell: React.FC = () => {
   const {
@@ -106,7 +105,7 @@ export const SidePanelShell: React.FC = () => {
   }, [isPanelVisible, panelMode, widthPercent, isExpanded, isExtension]);
 
   if (!isPanelVisible) {
-    return <AmbientTrigger />;
+    return null;
   }
 
   const isLearning = currentView === 'learning';
@@ -149,9 +148,7 @@ export const SidePanelShell: React.FC = () => {
 
   // DOCK MODE STYLES
   return (
-    <>
-      <AmbientTrigger />
-      <div
+    <div
         style={{
           position: effectivePosition,
           top: 0,
@@ -197,6 +194,5 @@ export const SidePanelShell: React.FC = () => {
         </div>
         {isLearning && <BottomBar />}
       </div>
-    </>
   );
 };
