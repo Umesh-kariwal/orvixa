@@ -1,3 +1,4 @@
+import { env } from '@/config/env';
 import type { RecommendedAction } from '@/types/context';
 
 export interface StreamIntentOptions {
@@ -26,7 +27,7 @@ export class StreamingService {
     this.activeAbortController = new AbortController();
 
     try {
-      const response = await fetch('/api/v1/stream/intent', {
+      const response = await fetch(`${env.apiBaseUrl}/stream/intent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
