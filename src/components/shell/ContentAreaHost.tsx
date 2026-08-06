@@ -22,6 +22,7 @@ export const ContentAreaHost: React.FC = () => {
     resetSession,
     executeAction,
     activeContext,
+    isExpanded,
   } = useSidePanel();
 
   // Route Views based on Current Settings View Selection
@@ -166,8 +167,33 @@ export const ContentAreaHost: React.FC = () => {
     const isLowConfidence = ctx.confidence < 0.35;
     const isSelectionActive = !!ctx.selectedText;
     const bodyCharCount = ctx.visibleText ? ctx.visibleText.length : (activeContext.observed_body_length || 0);
-    const confidencePercent = Math.round(ctx.confidence * 100);
-    const confidenceTierLabel = ctx.confidence >= 0.85 ? 'HIGH' : ctx.confidence >= 0.6 ? 'MEDIUM' : 'LOW';
+    const getContextBadgeLabel = () => {
+      const url = ctx.url?.toLowerCase() || '';
+      const category = ctx.platform?.toLowerCase() || '';
+
+      if (url.includes('leetcode.com')) {
+        return 'LeetCode Problem';
+      }
+      if (url.includes('wikipedia.org')) {
+        return 'Wikipedia Article';
+      }
+      if (url.includes('google.com') || url.includes('google.co.in')) {
+        return 'Google Search';
+      }
+      if (url.includes('github.com')) {
+        return 'GitHub Repository';
+      }
+      if (url.includes('notion.so') || url.includes('notion.site')) {
+        return 'Notion Page';
+      }
+      if (category === 'code') {
+        return 'Code Workspace';
+      }
+      if (category === 'docs') {
+        return 'Article Context';
+      }
+      return 'Context Ready';
+    };
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', margin: '8px 0' }}>
@@ -181,10 +207,10 @@ export const ContentAreaHost: React.FC = () => {
               fontWeight: 700, 
               padding: '2px 8px', 
               borderRadius: '4px',
-              backgroundColor: isLowConfidence ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-              color: isLowConfidence ? 'var(--rose-primary)' : 'var(--emerald-primary)'
+              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              color: 'var(--emerald-primary)'
             }}>
-              {confidenceTierLabel} ({confidencePercent}%)
+              {getContextBadgeLabel()}
             </span>
           </div>
 
@@ -264,6 +290,112 @@ export const ContentAreaHost: React.FC = () => {
     );
   };
 
+  // Render Welcome Landing Screen when chat history is empty
+  const renderWelcomeLanding = () => {
+    if (conversationHistory.length !== 0 || panelState !== 'READY') return null;
+
+    const quickActions = [
+      { id: 'explain', title: 'Explain Concept', desc: 'Get a thorough, clear breakdown of what is on your screen right now.', icon: '💡', bg: 'linear-gradient(135deg, rgba(167, 139, 250, 0.15) 0%, rgba(139, 92, 246, 0.05) 100%)', border: 'rgba(167, 139, 250, 0.2)' },
+      { id: 'hint', title: 'Socratic Hint Ladder', desc: 'Ask step-by-step questions to guide you to the solution without spoiling it.', icon: '🧠', bg: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.05) 100%)', border: 'rgba(245, 158, 11, 0.2)' },
+      { id: 'teach', title: 'Deep Walkthrough', desc: 'Go through a detailed walkthrough of the entire page content.', icon: '📘', bg: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.05) 100%)', border: 'rgba(59, 130, 246, 0.2)' },
+      { id: 'practice_quiz', title: 'Practice Quiz', desc: 'Generate test questions on the active topic to practice.', icon: '🎯', bg: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.05) 100%)', border: 'rgba(16, 185, 129, 0.2)' }
+    ];
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', padding: '10px 0' }}>
+        {/* Welcome Hero */}
+        <div style={{
+          textAlign: 'center',
+          padding: '24px 16px',
+          borderRadius: '16px',
+          background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(236, 72, 153, 0.03) 100%)',
+          border: '1px solid rgba(255, 255, 255, 0.05)',
+        }}>
+          <Heading level={2} style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '8px', background: 'linear-gradient(135deg, #a78bfa 0%, #ec4899 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            Welcome to Orvixa
+          </Heading>
+          <Text variant="secondary" style={{ fontSize: '0.85rem', maxWidth: '500px', margin: '0 auto', color: 'var(--text-secondary)' }}>
+            Your universal learning copilot. I am synced with your active browser screen. Select an option below or type a message to start.
+          </Text>
+        </div>
+
+        {/* Quick Actions Grid */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <Text variant="secondary" style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)', paddingLeft: '4px' }}>
+            What would you like to do?
+          </Text>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isExpanded ? 'repeat(2, 1fr)' : '1fr',
+            gap: '12px',
+          }}>
+            {quickActions.map((act) => (
+              <div
+                key={act.id}
+                onClick={() => executeAction({
+                  action_id: act.id,
+                  label: act.title,
+                  description: act.desc,
+                  icon: 'sparkles'
+                })}
+                style={{
+                  padding: '16px',
+                  borderRadius: '12px',
+                  background: act.bg,
+                  border: `1px solid ${act.border}`,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  gap: '14px',
+                  alignItems: 'flex-start',
+                  transition: 'transform 150ms ease, box-shadow 150ms ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.15)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'none';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                <span style={{ fontSize: '1.4rem', lineHeight: '1' }}>{act.icon}</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>{act.title}</span>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>{act.desc}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Collapsible Screen Context Card */}
+        <details style={{
+          marginTop: '12px',
+          borderRadius: '12px',
+          border: '1px solid var(--border-color)',
+          backgroundColor: 'rgba(255,255,255,0.01)',
+          overflow: 'hidden'
+        }}>
+          <summary style={{
+            cursor: 'pointer',
+            padding: '12px 16px',
+            fontSize: '0.8rem',
+            fontWeight: 700,
+            color: 'var(--text-secondary)',
+            backgroundColor: 'rgba(255,255,255,0.02)',
+            userSelect: 'none',
+            outline: 'none',
+          }}>
+            🔍 View Active Page Extraction (Screen Context)
+          </summary>
+          <div style={{ padding: '0 16px 16px 16px' }}>
+            {renderScreenContextCard()}
+          </div>
+        </details>
+      </div>
+    );
+  };
+
   // Structured Loader Messaging based on active thinking steps
   if (panelState === 'THINKING') {
     let loaderMessage = 'Analyzing page elements...';
@@ -314,7 +446,15 @@ export const ContentAreaHost: React.FC = () => {
   }
 
   return (
-    <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div style={{
+      padding: '16px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '16px',
+      maxWidth: isExpanded ? '850px' : '100%',
+      margin: isExpanded ? '0 auto' : '0',
+      width: '100%'
+    }}>
       {renderResetHeader()}
 
       {/* Render Conversation Thread History */}
@@ -389,7 +529,7 @@ export const ContentAreaHost: React.FC = () => {
       )}
 
       {/* Idle / Initial Landing Guide */}
-      {conversationHistory.length === 0 && panelState === 'READY' && renderScreenContextCard()}
+      {conversationHistory.length === 0 && panelState === 'READY' && renderWelcomeLanding()}
 
       {renderFollowUps()}
     </div>

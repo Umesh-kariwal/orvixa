@@ -3,6 +3,18 @@ import { Card } from '@/components/ui/Card';
 import type { RendererComponentProps } from '../core/types';
 import { Copy, Check } from 'lucide-react';
 
+const getMermaidUrl = (spec: string): string => {
+  try {
+    const base64 = btoa(encodeURIComponent(spec).replace(/%([0-9A-F]{2})/g, (_match, p1) => {
+      return String.fromCharCode(parseInt(p1, 16));
+    }));
+    return `https://mermaid.ink/img/${base64}`;
+  } catch (e) {
+    console.error('Failed to encode mermaid spec:', e);
+    return '';
+  }
+};
+
 export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload }) => {
   const content = payload.summary || payload.structured_data?.markdown || '';
 
@@ -13,9 +25,9 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
 
   const safeContent = sanitizeText(content);
 
-  // Helper to parse inline styles safely (bold, code, links)
+  // Helper to parse inline styles safely (bold, code, links, images)
   const parseInline = (text: string): React.ReactNode[] => {
-    const tokenRegex = /(\*\*.*?\*\*|`.*?`|\[.*?\]\(.*?\))/g;
+    const tokenRegex = /(\*\*.*?\*\*|`.*?`|!\[.*?\]\(.*?\)|\[.*?\]\(.*?\))/g;
     const parts = text.split(tokenRegex);
     return parts.map((part, i) => {
       if (part.startsWith('**') && part.endsWith('**')) {
@@ -41,6 +53,55 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
             {part.slice(1, -1)}
           </code>
         );
+      }
+      if (part.startsWith('![') && part.includes('](')) {
+        const match = part.match(/!\[(.*?)\]\((.*?)\)/);
+        if (match) {
+          return (
+            <div
+              key={i}
+              style={{
+                margin: '16px 0',
+                borderRadius: '8px',
+                border: '1px solid var(--border-color)',
+                overflow: 'hidden',
+                backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                width: '100%',
+                maxWidth: '600px',
+              }}
+            >
+              <img
+                src={match[2]}
+                alt={match[1]}
+                style={{
+                  width: '100%',
+                  height: 'auto',
+                  display: 'block',
+                  borderRadius: '8px 8px 0 0',
+                }}
+                loading="lazy"
+              />
+              {match[1] && (
+                <div
+                  style={{
+                    fontSize: '0.75rem',
+                    color: 'var(--text-secondary)',
+                    textAlign: 'center',
+                    padding: '8px 12px',
+                    borderTop: '1px solid var(--border-color)',
+                    width: '100%',
+                    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                  }}
+                >
+                  {match[1]}
+                </div>
+              )}
+            </div>
+          );
+        }
       }
       if (part.startsWith('[') && part.includes('](')) {
         const match = part.match(/\[(.*?)\]\((.*?)\)/);
@@ -124,68 +185,98 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
         const blockId = `code-${idx}`;
         const isCopied = copiedBlockId === blockId;
 
-        renderedBlocks.push(
-          <div
-            key={blockId}
-            style={{
-              position: 'relative',
-              margin: '12px 0 16px 0',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--border-color)',
-              overflow: 'hidden',
-              backgroundColor: 'rgba(15, 23, 42, 0.95)',
-            }}
-          >
-            {/* Header toolbar */}
+        if (codeBlockLang === 'mermaid') {
+          const imgUrl = getMermaidUrl(codeText);
+          renderedBlocks.push(
             <div
+              key={blockId}
               style={{
+                margin: '16px 0',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-color)',
+                overflow: 'hidden',
+                backgroundColor: 'rgba(255, 255, 255, 0.95)', // White background to show the flowchart clearly!
                 display: 'flex',
-                justifyContent: 'space-between',
+                flexDirection: 'column',
                 alignItems: 'center',
-                padding: '6px 12px',
-                borderBottom: '1px solid rgba(255,255,255,0.08)',
-                backgroundColor: 'rgba(30, 41, 59, 0.4)',
+                padding: '16px',
               }}
             >
-              <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace' }}>
-                {codeBlockLang || 'code'}
-              </span>
-              <button
-                onClick={() => handleCopyCode(codeText, blockId)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: isCopied ? '#34d399' : 'rgba(255,255,255,0.5)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  fontSize: '0.65rem',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                }}
-                title="Copy to clipboard"
-              >
-                {isCopied ? <Check size={12} /> : <Copy size={12} />}
-                {isCopied ? 'Copied' : 'Copy'}
-              </button>
+              <img
+                src={imgUrl}
+                alt="Flowchart Diagram"
+                style={{ maxWidth: '100%', height: 'auto', display: 'block' }}
+                loading="lazy"
+              />
+              <div style={{ fontSize: '0.7rem', color: 'rgba(0,0,0,0.5)', marginTop: '8px', fontFamily: 'var(--font-sans)' }}>
+                Visual Flowchart Diagram
+              </div>
             </div>
-            {/* Code Content */}
-            <pre
+          );
+        } else {
+          renderedBlocks.push(
+            <div
+              key={blockId}
               style={{
-                margin: 0,
-                padding: '12px',
-                overflowX: 'auto',
-                fontSize: '0.8rem',
-                fontFamily: 'SFMono-Regular, Consolas, Monaco, monospace',
-                color: '#e2e8f0',
-                lineHeight: 1.5,
+                position: 'relative',
+                margin: '12px 0 16px 0',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-color)',
+                overflow: 'hidden',
+                backgroundColor: 'rgba(15, 23, 42, 0.95)',
               }}
             >
-              <code>{codeText}</code>
-            </pre>
-          </div>
-        );
+              {/* Header toolbar */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '6px 12px',
+                  borderBottom: '1px solid rgba(255,255,255,0.08)',
+                  backgroundColor: 'rgba(30, 41, 59, 0.4)',
+                }}
+              >
+                <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace' }}>
+                  {codeBlockLang || 'code'}
+                </span>
+                <button
+                  onClick={() => handleCopyCode(codeText, blockId)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: isCopied ? '#34d399' : 'rgba(255,255,255,0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '0.65rem',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                  }}
+                  title="Copy to clipboard"
+                >
+                  {isCopied ? <Check size={12} /> : <Copy size={12} />}
+                  {isCopied ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+              {/* Code Content */}
+              <pre
+                style={{
+                  margin: 0,
+                  padding: '12px',
+                  overflowX: 'auto',
+                  fontSize: '0.8rem',
+                  fontFamily: 'SFMono-Regular, Consolas, Monaco, monospace',
+                  color: '#e2e8f0',
+                  lineHeight: 1.5,
+                }}
+              >
+                <code>{codeText}</code>
+              </pre>
+            </div>
+          );
+        }
         codeBlockLines = [];
         codeBlockLang = '';
       } else {
@@ -253,7 +344,8 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
     }
 
     // 3. Headers handler
-    if (line.startsWith('### ')) {
+    const h3Match = line.match(/^###\s*(.*)/);
+    if (h3Match) {
       flushList(idx);
       renderedBlocks.push(
         <h4
@@ -266,12 +358,13 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
             letterSpacing: '-0.01em',
           }}
         >
-          {parseInline(line.slice(4))}
+          {parseInline(h3Match[1].trim())}
         </h4>
       );
       continue;
     }
-    if (line.startsWith('## ')) {
+    const h2Match = line.match(/^##\s*(.*)/);
+    if (h2Match) {
       flushList(idx);
       renderedBlocks.push(
         <h3
@@ -286,12 +379,13 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
             paddingBottom: '4px',
           }}
         >
-          {parseInline(line.slice(3))}
+          {parseInline(h2Match[1].trim())}
         </h3>
       );
       continue;
     }
-    if (line.startsWith('# ')) {
+    const h1Match = line.match(/^#\s*(.*)/);
+    if (h1Match) {
       flushList(idx);
       renderedBlocks.push(
         <h2
@@ -304,7 +398,7 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
             letterSpacing: '-0.03em',
           }}
         >
-          {parseInline(line.slice(2))}
+          {parseInline(h1Match[1].trim())}
         </h2>
       );
       continue;
@@ -355,6 +449,8 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
           fontSize: '0.85rem',
           lineHeight: 1.6,
           color: 'var(--text-secondary)',
+          wordBreak: 'break-word',
+          overflowWrap: 'break-word',
         }}
       >
         {parseInline(rawLine)}
@@ -366,7 +462,7 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
   flushList(lines.length);
 
   return (
-    <Card variant="glass" style={{ padding: '16px', overflowY: 'auto' }}>
+    <Card variant="glass" style={{ padding: '12px 14px', width: '100%' }}>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         {renderedBlocks}
       </div>

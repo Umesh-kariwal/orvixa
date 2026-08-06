@@ -1,13 +1,15 @@
+import os
 from typing import Dict, List, Optional
 from app.core.ai.base_provider import BaseAIProvider
 from app.core.ai.gemini_provider import GoogleGeminiProvider
+from app.core.ai.nvidia_provider import NvidiaProvider
 from app.core.ai.reliability import CircuitBreaker, CircuitState
 
 
 class AIProviderRegistry:
     """Production Provider Registry & Circuit Breaker Manager.
 
-    Resolves AI provider by key (gemini, claude, openai, deepseek, ollama),
+    Resolves AI provider by key (gemini, nvidia, etc.),
     evaluates circuit breaker health, and manages automatic fallback.
     """
 
@@ -19,11 +21,27 @@ class AIProviderRegistry:
     def register_provider(cls, provider: BaseAIProvider):
         name = provider.provider_name
         cls._providers[name] = provider
-        cls._circuit_breakers[name] = CircuitBreaker()
+        
+        # Set a low failure threshold (1 failure) for Gemini if Nvidia key is present
+        from app.core.config import settings
+        nvidia_key = getattr(settings, "NVIDIA_API_KEY", None) or os.getenv("NVIDIA_API_KEY")
+        threshold = 1 if (name == "google_gemini" and nvidia_key) else 5
+        
+        cls._circuit_breakers[name] = CircuitBreaker(failure_threshold=threshold)
 
     @classmethod
     def resolve_provider(cls, provider_name: Optional[str] = None) -> BaseAIProvider:
         target_name = provider_name or cls._default_provider_name
+        
+        # Preemptive override: if Google Gemini is requested but an Nvidia API key is configured
+        # and Gemini key is missing/empty, automatically redirect to Nvidia provider.
+        from app.core.config import settings
+        nvidia_key = getattr(settings, "NVIDIA_API_KEY", None) or os.getenv("NVIDIA_API_KEY")
+        gemini_key = settings.GEMINI_API_KEY
+        
+        if target_name == "google_gemini" and nvidia_key and (not gemini_key or not gemini_key.strip()):
+            target_name = "nvidia"
+
         circuit = cls._circuit_breakers.get(target_name)
 
         if circuit and not circuit.allow_request():
@@ -68,3 +86,5 @@ class AIProviderRegistry:
 
 # Register default Google Gemini Provider on initialization
 AIProviderRegistry.register_provider(GoogleGeminiProvider())
+# Register Nvidia NIM Provider on initialization
+AIProviderRegistry.register_provider(NvidiaProvider())

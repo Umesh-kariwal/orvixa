@@ -1,0 +1,269 @@
+import json
+import uuid
+import time
+import os
+import httpx
+from typing import Any, AsyncGenerator, Dict, Optional, List
+from app.core.ai.base_provider import (
+    BaseAIProvider,
+    ProviderCapabilities,
+    ProviderMetrics,
+    StreamChunk,
+)
+from app.core.learning.intent_detector import IntentDetector
+from app.core.learning.prompt_builder import LearningPromptBuilder
+from app.core.config import settings
+from app.core.logging import logger
+
+class NvidiaProvider(BaseAIProvider):
+    """NVIDIA NIM LLM provider implementing BaseAIProvider.
+    
+    Streams via OpenAI-compatible endpoints on build.nvidia.com.
+    """
+
+    def __init__(self):
+        self._api_key = getattr(settings, "NVIDIA_API_KEY", None) or os.getenv("NVIDIA_API_KEY")
+        self._model = "meta/llama-3.1-8b-instruct"
+        self._base_url = "https://integrate.api.nvidia.com/v1/chat/completions"
+
+    @property
+    def provider_name(self) -> str:
+        return "nvidia"
+
+    @property
+    def default_model(self) -> str:
+        return self._model
+
+    def get_capabilities(self) -> ProviderCapabilities:
+        return ProviderCapabilities(
+            supports_streaming=True,
+            supports_cancellation=True,
+            supports_function_calling=False,
+            max_token_limit=131072,
+        )
+
+    async def get_health(self) -> bool:
+        # Re-evaluate API key on health check
+        self._api_key = getattr(settings, "NVIDIA_API_KEY", None) or os.getenv("NVIDIA_API_KEY")
+        return bool(self._api_key and self._api_key.strip())
+
+    async def stream_intent(
+        self,
+        context_payload: Dict[str, Any],
+        intent_type: str,
+        prompt_text: str,
+        context_id: str,
+        intent_id: str,
+        conversation_history: Optional[List[Dict[str, str]]] = None,
+        custom_api_key: Optional[str] = None,
+    ) -> AsyncGenerator[StreamChunk, None]:
+        start_time = time.time()
+        first_token_time: Optional[float] = None
+        tokens_emitted = 0
+
+        self._api_key = getattr(settings, "NVIDIA_API_KEY", None) or os.getenv("NVIDIA_API_KEY")
+        resolved_key = custom_api_key or self._api_key
+
+        # Detect image generation request
+        query_lower = (prompt_text or "").lower()
+        is_image_request = any(kw in query_lower for kw in [
+            "image", "photo", "pic", "picture", "draw", "paint", "sketch", "artwork", "illustration", "photograph"
+        ])
+
+        if is_image_request:
+            logger.info("NvidiaProvider: Detected image generation request. Generating FLUX image URL...")
+            try:
+                import urllib.parse
+                import asyncio
+                yield StreamChunk(
+                    chunk_id=str(uuid.uuid4()),
+                    context_id=context_id,
+                    intent_id=intent_id,
+                    token_text="",
+                    is_final=False,
+                )
+                
+                # Build enhanced prompt for FLUX (which does hyper-realistic human faces and details!)
+                enhanced_prompt = prompt_text
+                if any(k in query_lower for k in ["girl", "woman", "man", "person", "lady", "model"]):
+                    enhanced_prompt += ", hyper-realistic photograph, highly detailed face, realistic skin texture, professional studio lighting, 8k resolution, cinematic composition"
+                elif any(k in query_lower for k in ["notes", "paper", "book", "handwritten"]):
+                    enhanced_prompt += ", clean handwritten notes text on white paper page, high-resolution detailed macro shot photograph, crisp and fully legible, highly structured layout"
+                else:
+                    enhanced_prompt += ", highly detailed, 8k resolution, cinematic, masterpieces"
+                
+                encoded_prompt = urllib.parse.quote(enhanced_prompt)
+                image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=768&nologo=true&private=true&model=flux"
+                
+                markdown_img = f"Here is your high-quality generated image:\n\n![Visual Representation]({image_url})"
+                
+                for i in range(0, len(markdown_img), 40):
+                    chunk_text = markdown_img[i:i+40]
+                    yield StreamChunk(
+                        chunk_id=str(uuid.uuid4()),
+                        context_id=context_id,
+                        intent_id=intent_id,
+                        token_text=chunk_text,
+                        is_final=(i + 40 >= len(markdown_img)),
+                    )
+                    await asyncio.sleep(0.01)
+                return
+            except Exception as e:
+                logger.exception("Error creating FLUX image URL: %s", str(e))
+ 
+        # 1. Detect Intent and Domain
+        learning_intent = IntentDetector.detect_intent(prompt_text or intent_type)
+        is_voice_chat = "voice_chat" in intent_id or "voice_chat" in intent_type
+ 
+        # 2. Build Structured Optimized Prompt
+        full_prompt = LearningPromptBuilder.build_prompt(
+            context_payload=context_payload,
+            intent_mode="VoiceChat" if is_voice_chat else learning_intent.intent_mode,
+            domain=learning_intent.domain,
+            conversation_history=conversation_history or [],
+            user_question=prompt_text or intent_type,
+        )
+ 
+        # Build messages structure for chat completions endpoint
+        system_instruction = ""
+        if is_voice_chat:
+            system_instruction = (
+                "You are Orvixa, the Universal AI Learning Copilot. You are in real-time voice conversation mode with the learner.\n"
+                "Pedagogical Rules:\n"
+                "- Respond in ONLY 1 or 2 short sentences. Be extremely concise.\n"
+                "- Do NOT use markdown, headings, lists, bold text, or stars (e.g. absolutely no '*', '###', '1.', or '**' in your response).\n"
+                "- Output pure conversational text that is natural and easy to read aloud.\n"
+                "- Speak directly to the learner. Respond in the same language the user spoke (Hindi or English)."
+            )
+        else:
+            system_instruction = (
+                "You are Orvixa, a highly advanced, empathetic, and world-class AI Learning & Interview Copilot.\n\n"
+                "COGNITIVE ALIGNMENT SYSTEM:\n"
+                "1. Semantic Output Scaling: You must dynamically scale the depth, length, and detail of your response to match the cognitive load and complexity of the user's query. Never dump long walls of text for simple lookups or yes/no questions. Scale fluidly from a single word, to a concise paragraph, to a multi-section deep study guide, depending solely on the query.\n"
+                "2. Adaptive Formatting Layouts: Present information using the most logically efficient layout:\n"
+                "   - For code modifications: Output clean, syntax-highlighted code blocks with minimal, precise comments.\n"
+                "   - For comparisons/trade-offs: Use structured markdown tables comparing features side-by-side.\n"
+                "   - For workflows/logical steps: Use visual Mermaid JS flowcharts (inside ```mermaid code blocks) to illustrate the sequence.\n"
+                "   - For concept breakdowns: Use clear markdown headers, bold callouts, and bullet points.\n"
+                "3. Contextual Integration: Synthesize active webpage context when the user asks questions about the page. For general queries, tap into your full knowledge base while keeping the pedagogical tone active.\n"
+                "4. Pedagogical Persona: Encourage curiosity, ask follow-up Socratic questions when appropriate, and guide the user Socratic-style when they ask for hints."
+            )
+ 
+        messages = [
+            {"role": "system", "content": system_instruction},
+        ]
+ 
+        # Extract context Title/URL/Content
+        page_title = context_payload.get("page_title", "Unknown Page")
+        url = context_payload.get("url", "")
+        cleaned_content = context_payload.get("cleaned_content", "")
+        
+        context_block = ""
+        if cleaned_content:
+            context_block = (
+                f"--- LEARNING ENVIRONMENT CONTEXT ---\n"
+                f"Page Title: {page_title}\n"
+                f"URL: {url}\n"
+                f"Content:\n{cleaned_content}\n\n"
+            )
+ 
+        # Push conversation history memory
+        for msg in (conversation_history or []):
+            role = "user" if msg.get("role") == "user" else "assistant"
+            messages.append({"role": role, "content": msg.get("text", "")})
+ 
+        # Append current user prompt
+        messages.append({"role": "user", "content": f"{context_block}Learner (Current Query): {prompt_text or intent_type}"})
+ 
+        if resolved_key and resolved_key.strip():
+            try:
+                headers = {
+                    "Authorization": f"Bearer {resolved_key.strip()}",
+                    "Content-Type": "application/json",
+                    "Accept": "text/event-stream",
+                }
+                body = {
+                    "model": self._model,
+                    "messages": messages,
+                    "temperature": 0.5,
+                    "max_tokens": 4096,
+                    "stream": True,
+                }
+                
+                logger.info("NvidiaProvider: Starting async stream query for model=%s", self._model)
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    async with client.stream("POST", self._base_url, headers=headers, json=body) as response:
+                        if response.status_code != 200:
+                            err_body = await response.aread()
+                            raise Exception(f"Nvidia NIM API returned status {response.status_code}: {err_body.decode('utf-8')}")
+                            
+                        async for line in response.aiter_lines():
+                            line = line.strip()
+                            if not line:
+                                continue
+                            if line.startswith("data: "):
+                                data_str = line[6:]
+                                if data_str == "[DONE]":
+                                    break
+                                try:
+                                    data_json = json.loads(data_str)
+                                    choices = data_json.get("choices", [])
+                                    if choices:
+                                        delta = choices[0].get("delta", {})
+                                        token_text = delta.get("content", "")
+                                        if token_text:
+                                            if first_token_time is None:
+                                                first_token_time = time.time()
+                                            tokens_emitted += 1
+                                            yield StreamChunk(
+                                                chunk_id=str(uuid.uuid4()),
+                                                context_id=context_id,
+                                                intent_id=intent_id,
+                                                token_text=token_text,
+                                                is_final=False,
+                                            )
+                                except Exception:
+                                    pass
+            except Exception as err:
+                logger.error("NvidiaProvider: Streaming failed: %s", err)
+                raise err
+        else:
+            # Fallback mock stub if no key is present
+            logger.warning("NvidiaProvider: No NVIDIA_API_KEY configured. Falling back to local offline stub.")
+            stub_chunks = [
+                "✦ **Nvidia NIM Provider (Offline Mode)**\n\n",
+                "Please make sure your `NVIDIA_API_KEY` is correctly saved in the `.env` file to enable active Nvidia NIM streaming!"
+            ]
+            for chunk in stub_chunks:
+                if first_token_time is None:
+                    first_token_time = time.time()
+                tokens_emitted += 1
+                yield StreamChunk(
+                    chunk_id=str(uuid.uuid4()),
+                    context_id=context_id,
+                    intent_id=intent_id,
+                    token_text=chunk,
+                    is_final=False,
+                )
+                await asyncio.sleep(0.05)
+
+        total_duration = (time.time() - start_time) * 1000
+        ttft = ((first_token_time or time.time()) - start_time) * 1000
+
+        metrics = ProviderMetrics(
+            provider_name=self.provider_name,
+            model_name=self._model,
+            first_token_latency_ms=round(ttft, 2),
+            total_duration_ms=round(total_duration, 2),
+            completion_tokens=tokens_emitted,
+            total_tokens=tokens_emitted + 50,
+        )
+
+        yield StreamChunk(
+            chunk_id=str(uuid.uuid4()),
+            context_id=context_id,
+            intent_id=intent_id,
+            token_text="",
+            is_final=True,
+            metrics=metrics,
+        )

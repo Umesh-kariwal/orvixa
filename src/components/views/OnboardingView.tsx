@@ -10,8 +10,6 @@ export const OnboardingView: React.FC = () => {
       display: 'flex',
       flexDirection: 'column',
       gap: '24px',
-      height: '100%',
-      overflowY: 'auto',
       color: 'var(--text-primary)',
       backgroundColor: 'var(--bg-panel)',
       fontFamily: 'var(--font-family)',
@@ -97,7 +95,7 @@ export const OnboardingView: React.FC = () => {
             fontSize: '12px',
             fontWeight: 'bold',
           }}>
-            Ctrl + K
+            Ctrl + Shift + Y
           </kbd>
           <span style={{ color: 'var(--text-secondary)' }}>or</span>
           <kbd style={{
@@ -108,7 +106,7 @@ export const OnboardingView: React.FC = () => {
             fontSize: '12px',
             fontWeight: 'bold',
           }}>
-            Cmd + K
+            Cmd + Shift + Y
           </kbd>
         </div>
       </div>
@@ -124,7 +122,7 @@ export const OnboardingView: React.FC = () => {
           color: '#ffffff',
           fontWeight: 700,
           cursor: 'pointer',
-          marginTop: 'auto',
+          marginTop: '24px',
           fontSize: '14px',
           transition: 'transform 0.15s ease',
         }}

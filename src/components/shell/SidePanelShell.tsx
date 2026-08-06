@@ -4,6 +4,8 @@ import { TopBar } from './TopBar';
 import { ActionPillsRow } from './ActionPillsRow';
 import { ContentAreaHost } from './ContentAreaHost';
 import { BottomBar } from './BottomBar';
+import { DashboardSidebar } from './DashboardSidebar';
+import { VoiceOverlay } from './VoiceOverlay';
 
 export const SidePanelShell: React.FC = () => {
   const {
@@ -16,6 +18,8 @@ export const SidePanelShell: React.FC = () => {
     setFloatingPosition,
     floatingSize,
     currentView,
+    conversationHistory,
+    streamingText,
   } = useSidePanel();
 
   const isDraggingRef = useRef<boolean>(false);
@@ -24,11 +28,30 @@ export const SidePanelShell: React.FC = () => {
   const startYRef = useRef<number>(0);
   const startWidthRef = useRef<number>(widthPercent);
   const startPosRef = useRef<{ x: number; y: number }>(floatingPosition);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+    }
+  }, [conversationHistory, streamingText, panelState]);
 
   // 60FPS Drag Resize Handler for Dock Mode
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
+
+      const isExtension = window.location.search.includes('mode=extension');
+      if (isExtension) {
+        window.parent.postMessage({
+          source: 'orvixa-copilot',
+          action: 'dock_resize_start',
+          startX: e.screenX,
+          currentWidthPercent: widthPercent
+        }, '*');
+        return;
+      }
+
       isDraggingRef.current = true;
       startXRef.current = e.clientX;
       startWidthRef.current = widthPercent;
@@ -57,6 +80,27 @@ export const SidePanelShell: React.FC = () => {
   const handleFloatingHeaderMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (panelMode !== 'floating') return;
+
+      // Ignore drag if clicking interactive elements (buttons, inputs, etc.)
+      const target = e.target as HTMLElement;
+      if (target.closest('button') || target.closest('input') || target.closest('select') || target.closest('a') || target.closest('[role="button"]')) {
+        return;
+      }
+
+      const isExtension = window.location.search.includes('mode=extension');
+      if (isExtension) {
+        e.preventDefault();
+        window.parent.postMessage({
+          source: 'orvixa-copilot',
+          action: 'drag_start',
+          startX: e.screenX,
+          startY: e.screenY,
+          currentX: floatingPosition.x,
+          currentY: floatingPosition.y
+        }, '*');
+        return;
+      }
+
       isMovingFloatingRef.current = true;
       startXRef.current = e.clientX;
       startYRef.current = e.clientY;
@@ -82,6 +126,30 @@ export const SidePanelShell: React.FC = () => {
       window.addEventListener('mouseup', handleMouseUp);
     },
     [panelMode, floatingPosition, setFloatingPosition]
+  );
+
+  // Resize Handler for Floating Mode (Extension mode)
+  const handleResizeMouseDown = useCallback(
+    (e: React.MouseEvent, direction: string) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const isExtension = window.location.search.includes('mode=extension');
+      if (isExtension) {
+        window.parent.postMessage({
+          source: 'orvixa-copilot',
+          action: 'resize_start',
+          direction,
+          startX: e.screenX,
+          startY: e.screenY,
+          currentWidth: floatingSize.width,
+          currentHeight: floatingSize.height,
+          currentX: floatingPosition.x,
+          currentY: floatingPosition.y
+        }, '*');
+      }
+    },
+    [floatingSize, floatingPosition]
   );
 
   const isPanelVisible = panelState !== 'COLLAPSED' && panelState !== 'HIDDEN';
@@ -116,11 +184,11 @@ export const SidePanelShell: React.FC = () => {
       <div
         style={{
           position: effectivePosition,
-          top: isExtension ? '24px' : `${floatingPosition.y}px`,
-          right: isExtension ? '24px' : 'auto',
-          left: isExtension ? 'auto' : `${floatingPosition.x}px`,
-          width: isExtension ? '360px' : `${floatingSize.width}px`,
-          height: isExtension ? 'calc(100vh - 48px)' : `${floatingSize.height}px`,
+          top: isExtension ? '0px' : `${floatingPosition.y}px`,
+          right: isExtension ? '0px' : 'auto',
+          left: isExtension ? '0px' : `${floatingPosition.x}px`,
+          width: isExtension ? '100%' : `${floatingSize.width}px`,
+          height: isExtension ? '100%' : `${floatingSize.height}px`,
           backgroundColor: 'var(--bg-glass)',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
@@ -134,14 +202,102 @@ export const SidePanelShell: React.FC = () => {
           overflow: 'hidden',
         }}
       >
-        <div onMouseDown={handleFloatingHeaderMouseDown} style={{ cursor: isExtension ? 'default' : 'move' }}>
+        <div onMouseDown={handleFloatingHeaderMouseDown} style={{ cursor: 'move' }}>
           <TopBar />
         </div>
         {isLearning && <ActionPillsRow />}
-        <div style={{ flex: 1, overflowY: 'auto' }}>
+        <div ref={scrollAreaRef} style={{ flex: 1, overflowY: 'auto' }}>
           <ContentAreaHost />
         </div>
         {isLearning && <BottomBar />}
+
+        {/* Resize Handles (w, e, s, sw, se) for Floating Mode (Extension mode) */}
+        {isExtension && (
+          <>
+            {/* Left Edge resize handle */}
+            <div
+              onMouseDown={(e) => handleResizeMouseDown(e, 'w')}
+              style={{
+                position: 'absolute',
+                top: '12px',
+                left: 0,
+                width: '6px',
+                height: 'calc(100% - 24px)',
+                cursor: 'w-resize',
+                zIndex: 999999,
+                backgroundColor: 'transparent',
+              }}
+            />
+            {/* Right Edge resize handle */}
+            <div
+              onMouseDown={(e) => handleResizeMouseDown(e, 'e')}
+              style={{
+                position: 'absolute',
+                top: '12px',
+                right: 0,
+                width: '6px',
+                height: 'calc(100% - 24px)',
+                cursor: 'e-resize',
+                zIndex: 999999,
+                backgroundColor: 'transparent',
+              }}
+            />
+            {/* Bottom Edge resize handle */}
+            <div
+              onMouseDown={(e) => handleResizeMouseDown(e, 's')}
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                left: '12px',
+                right: '12px',
+                height: '6px',
+                cursor: 's-resize',
+                zIndex: 999999,
+                backgroundColor: 'transparent',
+              }}
+            />
+            {/* Bottom-Left corner resize handle */}
+            <div
+              onMouseDown={(e) => handleResizeMouseDown(e, 'sw')}
+              style={{
+                position: 'absolute',
+                bottom: '0',
+                left: '0',
+                width: '16px',
+                height: '16px',
+                cursor: 'sw-resize',
+                zIndex: 999999,
+                background: 'linear-gradient(225deg, transparent 70%, var(--border-color) 70%, var(--border-color) 75%, transparent 75%, transparent 80%, var(--border-color) 80%, var(--border-color) 85%, transparent 85%)',
+                borderBottomLeftRadius: 'var(--radius-lg)',
+                opacity: 0.6,
+                transition: 'opacity 150ms ease',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.6')}
+              title="Drag to resize floating panel (SW)"
+            />
+            {/* Bottom-Right corner resize handle */}
+            <div
+              onMouseDown={(e) => handleResizeMouseDown(e, 'se')}
+              style={{
+                position: 'absolute',
+                bottom: '0',
+                right: '0',
+                width: '16px',
+                height: '16px',
+                cursor: 'se-resize',
+                zIndex: 999999,
+                background: 'linear-gradient(135deg, transparent 70%, var(--border-color) 70%, var(--border-color) 75%, transparent 75%, transparent 80%, var(--border-color) 80%, var(--border-color) 85%, transparent 85%)',
+                borderBottomRightRadius: 'var(--radius-lg)',
+                opacity: 0.6,
+                transition: 'opacity 150ms ease',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.6')}
+              title="Drag to resize floating panel (SE)"
+            />
+          </>
+        )}
       </div>
     );
   }
@@ -170,29 +326,51 @@ export const SidePanelShell: React.FC = () => {
         }}
       >
         {/* 60FPS Resizable Left Edge Drag Handle */}
-        {!isExpanded && !isExtension && (
+        {!isExpanded && (
           <div
             onMouseDown={handleMouseDown}
             style={{
               position: 'absolute',
               top: 0,
-              left: '-4px',
+              left: 0,
               width: '8px',
               height: '100%',
               cursor: 'col-resize',
               zIndex: 999999,
               backgroundColor: 'transparent',
+              transition: 'background-color 150ms ease',
             }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.15)')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
             title="Drag to resize side dock (25% - 50%)"
           />
         )}
 
         <TopBar />
-        {isLearning && <ActionPillsRow />}
-        <div style={{ flex: 1, overflowY: 'auto' }}>
-          <ContentAreaHost />
-        </div>
-        {isLearning && <BottomBar />}
+        {isExpanded ? (
+          <div style={{ display: 'flex', flex: 1, overflow: 'hidden', width: '100%' }}>
+            {/* Left Column: Chat Area */}
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, height: '100%' }}>
+              {isLearning && <ActionPillsRow />}
+              <div ref={scrollAreaRef} style={{ flex: 1, overflowY: 'auto' }}>
+                <ContentAreaHost />
+              </div>
+              {isLearning && <BottomBar />}
+            </div>
+            
+            {/* Right Column: Interactive Dashboard Sidebar Widgets */}
+            <DashboardSidebar />
+          </div>
+        ) : (
+          <>
+            {isLearning && <ActionPillsRow />}
+            <div ref={scrollAreaRef} style={{ flex: 1, overflowY: 'auto' }}>
+              <ContentAreaHost />
+            </div>
+            {isLearning && <BottomBar />}
+          </>
+        )}
+        <VoiceOverlay />
       </div>
   );
 };

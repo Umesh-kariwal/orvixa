@@ -20,8 +20,6 @@ export const PrivacyDashboard: React.FC = () => {
       display: 'flex',
       flexDirection: 'column',
       gap: '20px',
-      height: '100%',
-      overflowY: 'auto',
       color: 'var(--text-primary)',
       backgroundColor: 'var(--bg-panel)',
       fontFamily: 'var(--font-family)',
@@ -82,7 +80,7 @@ export const PrivacyDashboard: React.FC = () => {
 
       {/* Security Seal */}
       <div style={{
-        marginTop: 'auto',
+        marginTop: '24px',
         padding: '14px',
         borderRadius: '12px',
         background: 'rgba(16, 185, 129, 0.05)',

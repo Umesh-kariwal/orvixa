@@ -24,9 +24,23 @@ def test_gemini_provider_capabilities():
 
 def test_provider_registry_resolution():
     """Test AIProviderRegistry resolves provider correctly."""
-    provider = AIProviderRegistry.resolve_provider("google_gemini")
-    assert isinstance(provider, GoogleGeminiProvider)
-    assert provider.provider_name == "google_gemini"
+    from app.core.config import settings
+    
+    # Save original values
+    orig_gemini = settings.AI_GEMINI_API_KEY
+    orig_nvidia = settings.NVIDIA_API_KEY
+    
+    settings.AI_GEMINI_API_KEY = "mock-key"
+    settings.NVIDIA_API_KEY = None
+    
+    try:
+        provider = AIProviderRegistry.resolve_provider("google_gemini")
+        assert isinstance(provider, GoogleGeminiProvider)
+        assert provider.provider_name == "google_gemini"
+    finally:
+        # Restore original values
+        settings.AI_GEMINI_API_KEY = orig_gemini
+        settings.NVIDIA_API_KEY = orig_nvidia
 
 
 def test_circuit_breaker_transitions():

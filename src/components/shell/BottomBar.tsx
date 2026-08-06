@@ -1,11 +1,20 @@
 import React, { useState } from 'react';
 import { useSidePanel } from '@/hooks/useSidePanel';
 import { Button } from '@/components/ui/Button';
-import { CornerDownLeft, Scan } from 'lucide-react';
+import { CornerDownLeft, Scan, Headphones } from 'lucide-react';
 
 export const BottomBar: React.FC = () => {
-  const { executeAction, performanceMetrics } = useSidePanel();
+  const { executeAction, performanceMetrics, activeContext, isExpanded, setIsVoiceModeActive } = useSidePanel();
   const [promptInput, setPromptInput] = useState<string>('');
+
+  const isContextReady = !!(activeContext && activeContext.pageContext && activeContext.observed_title !== 'orvixa' && !activeContext.observed_url?.startsWith('chrome-extension://'));
+  console.log('[DEBUG-BOTTOMBAR] Context state:', {
+    hasActiveContext: !!activeContext,
+    hasPageContext: !!activeContext?.pageContext,
+    observed_title: activeContext?.observed_title,
+    observed_url: activeContext?.observed_url,
+    isContextReady
+  });
 
   const handleSend = () => {
     if (!promptInput.trim()) return;
@@ -19,6 +28,7 @@ export const BottomBar: React.FC = () => {
   };
 
   const handleScanScreen = () => {
+    if (!isContextReady) return;
     executeAction({
       action_id: 'explain',
       label: 'Screen Analysis',
@@ -44,6 +54,7 @@ export const BottomBar: React.FC = () => {
         paddingTop: '8px',
         borderTop: '1px solid rgba(255, 255, 255, 0.05)',
         width: '100%',
+        maxWidth: isExpanded ? '850px' : '100%',
       }}>
         {firstOpenTime && <span>Open: {firstOpenTime}ms</span>}
         {ttft && <span>TTFT: {ttft}ms</span>}
@@ -61,18 +72,20 @@ export const BottomBar: React.FC = () => {
         display: 'flex',
         flexDirection: 'column',
         gap: '8px',
+        alignItems: 'center',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', maxWidth: isExpanded ? '850px' : '100%' }}>
         {/* Compact Screen Analysis Trigger Icon (Law 3 Privacy Rules) */}
         <Button
           variant="ghost"
           size="sm"
           onClick={handleScanScreen}
-          title="Analyze Screen Content (Explicit User Permission)"
-          style={{ padding: '8px' }}
+          disabled={!isContextReady}
+          title={isContextReady ? "Analyze Screen Content (Explicit User Permission)" : "Waiting for active page context synchronization..."}
+          style={{ padding: '8px', opacity: isContextReady ? 1 : 0.4, cursor: isContextReady ? 'pointer' : 'not-allowed' }}
         >
-          <Scan size={16} style={{ color: 'var(--brand-primary)' }} />
+          <Scan size={16} style={{ color: isContextReady ? 'var(--brand-primary)' : 'var(--text-muted)' }} />
         </Button>
 
         {/* Input Prompt Box */}
@@ -94,6 +107,17 @@ export const BottomBar: React.FC = () => {
             fontFamily: 'var(--font-sans)',
           }}
         />
+
+        {/* Voice Assistant Activation Trigger (ChatGPT-Style Headphone Icon) */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setIsVoiceModeActive(true)}
+          title="Start Immersive Voice Conversation"
+          style={{ padding: '8px', cursor: 'pointer' }}
+        >
+          <Headphones size={16} style={{ color: 'var(--text-muted)' }} />
+        </Button>
 
         <Button variant="primary" size="sm" onClick={handleSend} disabled={!promptInput.trim()}>
           <CornerDownLeft size={14} />

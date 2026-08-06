@@ -28,8 +28,6 @@ export const SettingsView: React.FC = () => {
       display: 'flex',
       flexDirection: 'column',
       gap: '20px',
-      height: '100%',
-      overflowY: 'auto',
       color: 'var(--text-primary)',
       backgroundColor: 'var(--bg-panel)',
       fontFamily: 'var(--font-family)',
@@ -151,13 +149,13 @@ export const SettingsView: React.FC = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-secondary)' }}>
           <span>Toggle copilot panel:</span>
           <kbd style={{ background: 'var(--bg-card)', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border-light)' }}>
-            Ctrl + K
+            Ctrl + Shift + Y
           </kbd>
         </div>
       </div>
 
       {/* Actions */}
-      <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {saveStatus && (
           <div style={{
             fontSize: '12px',

@@ -8,7 +8,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # Authoritatively load backend/.env into os.environ using absolute directory paths
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 env_path = BASE_DIR / ".env"
-load_dotenv(dotenv_path=env_path)
+load_dotenv(dotenv_path=env_path, override=True)
 
 
 class Settings(BaseSettings):
@@ -21,7 +21,8 @@ class Settings(BaseSettings):
     
     # AI Engine Configuration
     AI_GEMINI_API_KEY: Optional[str] = Field(default=None, description="Google Gemini API Key")
-    GEMINI_MODEL: str = Field(default="gemini-3.6-flash", description="Default Gemini model name")
+    GEMINI_MODEL: str = Field(default="gemini-2.0-flash", description="Default Gemini model name")
+    NVIDIA_API_KEY: Optional[str] = Field(default=None, description="NVIDIA API Key")
 
     # CORS Configuration
     CORS_ORIGINS: List[str] = Field(

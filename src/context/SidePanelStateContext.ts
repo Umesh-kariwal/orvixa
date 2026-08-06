@@ -63,6 +63,8 @@ export interface SidePanelStateContextType {
   setCurrentView: (view: ActiveView) => void;
   completeOnboarding: () => void;
   saveApiKey: (key: string) => void;
+  isVoiceModeActive: boolean;
+  setIsVoiceModeActive: (active: boolean) => void;
 }
 
 export const SidePanelStateContext = createContext<SidePanelStateContextType | undefined>(undefined);

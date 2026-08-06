@@ -27,19 +27,22 @@ export class StreamingService {
     this.activeAbortController = new AbortController();
 
     try {
+      const payload = {
+        context_id: options.contextId,
+        intent_id: options.intentId,
+        intent_type: options.intentType,
+        prompt_text: options.action.description,
+        provider_hint: 'google_gemini',
+        context_payload: options.contextPayload || {},
+        conversation_history: options.conversationHistory || [],
+        api_key: options.customApiKey || '',
+      };
+      console.log('[DEBUG-STAGE-6] StreamingService payload:', payload);
+
       const response = await fetch(`${env.apiBaseUrl}/stream/intent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          context_id: options.contextId,
-          intent_id: options.intentId,
-          intent_type: options.intentType,
-          prompt_text: options.action.description,
-          provider_hint: 'google_gemini',
-          context_payload: options.contextPayload || {},
-          conversation_history: options.conversationHistory || [],
-          api_key: options.customApiKey || '',
-        }),
+        body: JSON.stringify(payload),
         signal: this.activeAbortController.signal,
       });
 
@@ -69,6 +72,9 @@ export class StreamingService {
               if (data.event === 'token' && data.token_text) {
                 options.onToken(data.token_text);
               } else if (data.event === 'final') {
+                if (data.token_text) {
+                  options.onToken(data.token_text);
+                }
                 options.onFinal?.(data.metrics);
               } else if (data.event === 'error') {
                 options.onError?.(data.message);

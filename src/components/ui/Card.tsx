@@ -48,7 +48,7 @@ export const Card: React.FC<CardProps> = ({
 
   const baseCardStyle: React.CSSProperties = {
     borderRadius: 'var(--radius-lg)',
-    padding: 'var(--space-lg)',
+    padding: 'var(--space-md)',
     transition: 'all var(--motion-normal) var(--easing-default)',
     ...getVariantStyles(),
     ...style,

@@ -9,15 +9,15 @@ export interface OrvixaBrowserPreferences {
   customApiKey: string;
 }
 
-const STORAGE_KEY = 'orvixa_browser_preferences_v1';
+const STORAGE_KEY = 'orvixa_browser_preferences_v2';
 
 const DEFAULT_PREFERENCES: OrvixaBrowserPreferences = {
   panelMode: 'dock',
-  dockWidth: 35,
+  dockWidth: 26,
   floatingPosition: { x: 100, y: 100 },
   floatingSize: { width: 420, height: 600 },
   isPinned: false,
-  shortcut: 'Ctrl+Shift+K',
+  shortcut: 'Ctrl+Shift+Y',
   onboardingCompleted: false,
   customApiKey: '',
 };

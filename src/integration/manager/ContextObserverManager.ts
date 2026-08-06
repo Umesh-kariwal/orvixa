@@ -14,6 +14,9 @@ export class ContextObserverManager {
   private static currentContext: NormalizedPlatformContext | null = null;
   private static hostContext: CurrentContext | null = null;
   private static registeredCallbacks: ObserverCallbacks | null = null;
+  private static retryTimer: any = null;
+  private static retryAttempts = 0;
+  private static hasAcknowledged = false;
 
   /**
    * Initializes dynamicObservers listening for selection and route changes.
@@ -47,13 +50,50 @@ export class ContextObserverManager {
     // 4. Message listener for cross-origin host context synchronization
     this.messageHandler = (event: MessageEvent) => {
       if (event.data && event.data.source === 'orvixa-content' && event.data.action === 'context_update') {
+        console.log('[DEBUG-STAGE-3] ContextObserverManager: Message received:', event.data);
+        console.log('[DEBUG-STAGE-3] Details:', {
+          contextId: 'ctx_' + event.data.context?.timestamp,
+          title: event.data.context?.pageTitle,
+          url: event.data.context?.url,
+        });
+        
         this.hostContext = event.data.context;
+        this.hasAcknowledged = true;
+        clearInterval(this.retryTimer);
+
+        // Send ACK back to content script
+        window.parent.postMessage({
+          source: 'orvixa-copilot',
+          action: 'ack',
+          contextId: 'ctx_' + event.data.context?.timestamp
+        }, '*');
+
         if (this.registeredCallbacks) {
           this.triggerExtraction(this.registeredCallbacks);
         }
       }
     };
     window.addEventListener('message', this.messageHandler);
+
+    this.hasAcknowledged = false;
+    this.retryAttempts = 0;
+
+    // 5. Instantly request initial context synchronization from host page to eliminate load race condition
+    const isExtensionMode = window.location.search.includes('mode=extension');
+    if (isExtensionMode) {
+      window.parent.postMessage({ source: 'orvixa-copilot', action: 'ready' }, '*');
+
+      // Auto-retry Ready handshake every 1000ms up to 3 times
+      this.retryTimer = setInterval(() => {
+        if (!this.hasAcknowledged && this.retryAttempts < 3) {
+          this.retryAttempts++;
+          console.log('[DEBUG-STAGE-2.2] Retrying ready handshake attempt:', this.retryAttempts);
+          window.parent.postMessage({ source: 'orvixa-copilot', action: 'ready' }, '*');
+        } else {
+          clearInterval(this.retryTimer);
+        }
+      }, 1000);
+    }
   }
 
   /**
@@ -63,6 +103,24 @@ export class ContextObserverManager {
     const isExtensionMode = window.location.search.includes('mode=extension');
     
     // Construct single source of truth context object
+    // If extension mode but no host context yet, return a loading context to prevent 'orvixa' iframe fallback!
+    if (isExtensionMode && !this.hostContext) {
+      const initializingContext: NormalizedPlatformContext = {
+        platform: { platformId: 'generic', name: 'generic', confidence: 0, category: 'generic', activeUrl: '' },
+        capabilities: [],
+        title: 'Initializing Orvixa...',
+        summary: 'Synchronizing active learning screen context...',
+        primarySnippet: { type: 'text', content: '' },
+        secondarySnippets: [],
+        metadata: { detectedTopic: 'Initializing...' },
+        timestamp: Date.now(),
+        pageContext: null as any // Force null pageContext so UI knows context is not ready
+      };
+      this.currentContext = initializingContext;
+      callbacks.onContextChange(initializingContext);
+      return initializingContext;
+    }
+
     const activeContext = isExtensionMode && this.hostContext 
       ? this.hostContext 
       : this.extractHostContext(document);
@@ -157,6 +215,11 @@ export class ContextObserverManager {
     if (this.debounceTimer) {
       clearTimeout(this.debounceTimer);
       this.debounceTimer = null;
+    }
+
+    if (this.retryTimer) {
+      clearInterval(this.retryTimer);
+      this.retryTimer = null;
     }
 
     this.registeredCallbacks = null;

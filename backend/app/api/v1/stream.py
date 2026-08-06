@@ -103,13 +103,20 @@ async def stream_intent(payload: StreamRequestSchema, request: Request):
 
             AIProviderRegistry.record_success(provider.provider_name)
 
-        except Exception:
+        except Exception as err:
+            from app.core.logging import logger
+            logger.exception("Uvicorn SSE Stream encountered exception")
             AIProviderRegistry.record_failure(provider.provider_name)
+            err_msg = str(err)
+            user_msg = "Real-time AI connection failure occurred."
+            if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg or "Quota" in err_msg:
+                user_msg = "Gemini API Quota Exceeded (429 Rate Limit). Please wait a few seconds and try again."
+            
             error_chunk = {
                 "event": "error",
                 "context_id": payload.context_id,
                 "intent_id": payload.intent_id,
-                "message": "Real-time AI connection failure occurred.",
+                "message": user_msg,
             }
             yield f"data: {json.dumps(error_chunk)}\n\n"
 

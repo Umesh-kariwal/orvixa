@@ -24,7 +24,7 @@ class GoogleGeminiProvider(BaseAIProvider):
 
     def __init__(self):
         self._api_key = settings.GEMINI_API_KEY
-        self._model = settings.GEMINI_MODEL or "gemini-3.6-flash"
+        self._model = settings.GEMINI_MODEL or "gemini-2.0-flash"
         self._client: Optional[genai.Client] = None
         if self._api_key:
             try:
@@ -77,11 +77,13 @@ class GoogleGeminiProvider(BaseAIProvider):
 
         # 1. Detect Intent and Domain
         learning_intent = IntentDetector.detect_intent(prompt_text or intent_type)
+        
+        is_voice_chat = "voice_chat" in intent_id or "voice_chat" in intent_type
 
         # 2. Build Structured Optimized Prompt
         full_prompt = LearningPromptBuilder.build_prompt(
             context_payload=context_payload,
-            intent_mode=learning_intent.intent_mode,
+            intent_mode="VoiceChat" if is_voice_chat else learning_intent.intent_mode,
             domain=learning_intent.domain,
             conversation_history=conversation_history or [],
             user_question=prompt_text or intent_type,
@@ -89,6 +91,7 @@ class GoogleGeminiProvider(BaseAIProvider):
 
         if active_client and resolved_key:
             try:
+
                 response = active_client.models.generate_content_stream(
                     model=self._model,
                     contents=full_prompt,
@@ -109,13 +112,7 @@ class GoogleGeminiProvider(BaseAIProvider):
                     )
                     await asyncio.sleep(0.01)
             except Exception as err:
-                yield StreamChunk(
-                    chunk_id=str(uuid.uuid4()),
-                    context_id=context_id,
-                    intent_id=intent_id,
-                    token_text=f"[Gemini Provider Error: {str(err)}. Fallback active.] ",
-                    is_final=False,
-                )
+                raise err
         else:
             # Local development fallback when no API key configured
             if learning_intent.intent_mode in ["Explain", "Teach"]:

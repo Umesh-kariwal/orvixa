@@ -28,6 +28,8 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   );
   const [onboardingCompleted, setOnboardingCompleted] = useState<boolean>(initialPrefs.onboardingCompleted);
   const [customApiKey, setCustomApiKey] = useState<string>(initialPrefs.customApiKey);
+  const [prefsLoaded, setPrefsLoaded] = useState(false);
+  const [isVoiceModeActive, setIsVoiceModeActive] = useState<boolean>(false);
 
   // Performance Benchmarking state
   const [performanceMetrics, setPerformanceMetrics] = useState<{
@@ -44,6 +46,19 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const requestStartTimeRef = useRef<number>(0);
   const isFirstTokenRef = useRef<boolean>(true);
 
+  const prevContextRef = useRef<ContextIntelligenceResult | null>(null);
+  useEffect(() => {
+    console.log('[DEBUG-STAGE-4] React State Context Change:', {
+      oldContextId: prevContextRef.current?.context_id || 'null',
+      newContextId: activeContext?.context_id || 'null',
+      oldTitle: prevContextRef.current?.observed_title || 'null',
+      newTitle: activeContext?.observed_title || 'null',
+      timestamp: Date.now(),
+      rawPageContext: activeContext?.pageContext,
+    });
+    prevContextRef.current = activeContext;
+  }, [activeContext]);
+
   // Load async chrome.storage.local preferences on mount
   useEffect(() => {
     StorageService.loadAsyncPreferences().then((asyncPrefs) => {
@@ -55,6 +70,7 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setOnboardingCompleted(asyncPrefs.onboardingCompleted);
       setCustomApiKey(asyncPrefs.customApiKey);
       setCurrentViewState(asyncPrefs.onboardingCompleted ? 'learning' : 'onboarding');
+      setPrefsLoaded(true);
     });
   }, []);
 
@@ -153,6 +169,12 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, []);
 
   const executeAction = useCallback((action: RecommendedAction) => {
+    const isContextReady = activeContext && activeContext.pageContext && activeContext.observed_title !== 'orvixa' && !activeContext.observed_url?.startsWith('chrome-extension://');
+    if (action.action_id === 'explain' && action.description === 'Analyze active learning screen content' && !isContextReady) {
+      console.warn('Blocked executeAction screen analysis: host page context not synchronized yet.');
+      return;
+    }
+
     setSelectedAction(action);
     setPanelState('THINKING');
     setThinkingStep('context');
@@ -174,19 +196,29 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setTimeout(() => setThinkingStep('intent'), 150);
       setTimeout(() => setThinkingStep('explanation'), 350);
 
+      console.log('[DEBUG-STAGE-5] executeAction() - Immediately before streamIntent():', {
+        contextId: activeContext?.context_id || 'null',
+        title: activeContext?.pageContext?.pageTitle || activeContext?.sanitized_summary || 'null',
+        url: activeContext?.pageContext?.url || 'null',
+        platform: activeContext?.pageContext?.platform || 'null',
+        selectedTextLength: activeContext?.pageContext?.selectedText?.length || 0,
+        visibleTextLength: activeContext?.pageContext?.visibleText?.length || 0,
+        rawActiveContext: activeContext,
+      });
+
       StreamingService.streamIntent({
         contextId: activeContext?.context_id || 'ctx_live',
         intentId: 'intent_' + action.action_id,
         intentType: action.action_id === 'trace_execution' ? 'CODE_DIFF_TRACE' : 'MICRO_SUMMARY',
         action,
         contextPayload: {
-          page_title: activeContext?.pageContext?.pageTitle || activeContext?.sanitized_summary || 'Universal Page',
-          cleaned_content: activeContext?.pageContext?.visibleText || activeContext?.sanitized_summary || '',
-          url: activeContext?.pageContext?.url || '',
-          selected_text: activeContext?.pageContext?.selectedText || '',
-          headings: activeContext?.pageContext?.headings || [],
-          topic: activeContext?.pageContext?.topic || '',
-          category: activeContext?.pageContext?.platform || '',
+          page_title: action.action_id === 'custom_learning_query' ? 'Universal Page' : (activeContext?.pageContext?.pageTitle || activeContext?.sanitized_summary || 'Universal Page'),
+          cleaned_content: action.action_id === 'custom_learning_query' ? '' : (activeContext?.pageContext?.visibleText || activeContext?.sanitized_summary || '').slice(0, 15000),
+          url: action.action_id === 'custom_learning_query' ? '' : (activeContext?.pageContext?.url || ''),
+          selected_text: action.action_id === 'custom_learning_query' ? '' : (activeContext?.pageContext?.selectedText || ''),
+          headings: action.action_id === 'custom_learning_query' ? [] : (activeContext?.pageContext?.headings || []),
+          topic: action.action_id === 'custom_learning_query' ? '' : (activeContext?.pageContext?.topic || ''),
+          category: action.action_id === 'custom_learning_query' ? '' : (activeContext?.pageContext?.platform || ''),
         },
         conversationHistory: currentHistorySnapshot.map((m) => ({ role: m.role, text: m.text })),
         customApiKey: customApiKey,
@@ -208,10 +240,25 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           const totalDuration = performance.now() - requestStartTimeRef.current;
           setPerformanceMetrics((prev) => ({ ...prev, totalDuration: Math.round(totalDuration) }));
 
-          setConversationHistory((prev) => [
-            ...prev,
-            { role: 'assistant', text: accumulatedTextRef.current, intent_mode: action.action_id, timestamp: Date.now() },
-          ]);
+          const textToSpeak = accumulatedTextRef.current;
+          setConversationHistory((prev) => {
+            if (localStorage.getItem('orvixa_voice_enabled') === 'true' && action.action_id === 'voice_chat') {
+              try {
+                window.speechSynthesis.cancel();
+                const cleanText = textToSpeak.replace(/[*#`$\\]/g, ' ');
+                const lang = localStorage.getItem('orvixa_voice_language') || 'en-US';
+                const utterance = new SpeechSynthesisUtterance(cleanText);
+                utterance.lang = lang;
+                window.speechSynthesis.speak(utterance);
+              } catch (e) {
+                console.error('Error auto-speaking response:', e);
+              }
+            }
+            return [
+              ...prev,
+              { role: 'assistant', text: textToSpeak, intent_mode: action.action_id, timestamp: Date.now() },
+            ];
+          });
         },
         onError: (err) => {
           if (retryCountRef.current < 1) {
@@ -279,53 +326,100 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return () => ContextObserverManager.stopObserving();
   }, []);
 
-  // Global Keyboard Shortcuts (Ctrl+K / Cmd+K toggle dock, Esc closes dock)
+  // Global Keyboard Shortcuts (Esc closes dock)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && panelState !== 'COLLAPSED' && panelState !== 'HIDDEN' && !isPinned) {
         closePanel();
-      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-        if (e.shiftKey) {
-          e.preventDefault();
-          togglePanel();
-        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [panelState, isPinned, closePanel, togglePanel]);
+  }, [panelState, isPinned, closePanel]);
 
-  // Extension mode iframe width postMessage synchronization channel
+  // Extension mode iframe layout postMessage synchronization channel
   useEffect(() => {
     const isExtensionMode = window.location.search.includes('mode=extension');
     if (!isExtensionMode) return;
 
-    let targetWidth = '0px';
-    const isVisible = panelState !== 'COLLAPSED' && panelState !== 'HIDDEN';
-
-    if (isVisible) {
-      targetWidth = isExpanded ? '100vw' : `${widthPercent}vw`;
-    } else {
-      targetWidth = '0px';
-    }
-
     window.parent.postMessage(
-      { source: 'orvixa-copilot', action: 'resize', width: targetWidth },
+      {
+        source: 'orvixa-copilot',
+        action: 'layout_change',
+        panelState,
+        panelMode,
+        widthPercent,
+        isExpanded,
+        floatingPosition,
+        floatingSize
+      },
       '*'
     );
-  }, [panelState, widthPercent, isExpanded]);
+  }, [panelState, panelMode, widthPercent, isExpanded, floatingPosition, floatingSize]);
 
-  // Listen for forwarded toggling events from Content script
+  // Listen for drag/resize and toggle events from Content script
   useEffect(() => {
-    const handleContentToggle = (event: MessageEvent) => {
-      if (event.data && event.data.source === 'orvixa-content' && event.data.action === 'toggle') {
-        togglePanel();
+    const handleContentMessage = (event: MessageEvent) => {
+      if (event.data && event.data.source === 'orvixa-content') {
+        const { action } = event.data;
+        if (action === 'toggle') {
+          togglePanel();
+        } else if (action === 'drag_move') {
+          const { x, y } = event.data;
+          setFloatingPositionState({ x, y });
+        } else if (action === 'drag_end') {
+          setFloatingPositionState((current) => {
+            StorageService.savePreferences({ floatingPosition: current });
+            return current;
+          });
+        } else if (action === 'resize_move') {
+          // De-prioritized during drag to enable 60FPS hardware-accelerated smooth resizing
+        } else if (action === 'resize_end') {
+          const { width, height, x } = event.data;
+          if (typeof width === 'number' && typeof height === 'number') {
+            setFloatingSizeState({ width, height });
+            setFloatingPositionState((currentPos) => {
+              const newPos = typeof x === 'number' ? { ...currentPos, x } : currentPos;
+              StorageService.savePreferences({
+                floatingSize: { width, height },
+                floatingPosition: newPos
+              });
+              return newPos;
+            });
+          }
+        } else if (action === 'dock_resize_move') {
+          // De-prioritized during drag to enable 60FPS hardware-accelerated smooth resizing
+        } else if (action === 'dock_resize_end') {
+          const { widthPercent } = event.data;
+          if (typeof widthPercent === 'number') {
+            setWidthPercentState(widthPercent);
+            StorageService.savePreferences({ dockWidth: widthPercent });
+          }
+        }
       }
     };
-    window.addEventListener('message', handleContentToggle);
-    return () => window.removeEventListener('message', handleContentToggle);
+    window.addEventListener('message', handleContentMessage);
+    return () => window.removeEventListener('message', handleContentMessage);
   }, [togglePanel]);
+
+  // Synchronize mouse release inside the iframe to parent page to avoid cursor lock/sticky drag issues
+  useEffect(() => {
+    const handleMouseUp = () => {
+      const isExtensionMode = window.location.search.includes('mode=extension');
+      if (isExtensionMode) {
+        window.parent.postMessage({ source: 'orvixa-copilot', action: 'drag_end' }, '*');
+        window.parent.postMessage({ source: 'orvixa-copilot', action: 'resize_end' }, '*');
+        window.parent.postMessage({ source: 'orvixa-copilot', action: 'dock_resize_end' }, '*');
+      }
+    };
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => window.removeEventListener('mouseup', handleMouseUp);
+  }, []);
+
+  if (!prefsLoaded) {
+    return null;
+  }
 
   return (
     <SidePanelStateContext.Provider
@@ -362,6 +456,8 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setCurrentView,
         completeOnboarding,
         saveApiKey,
+        isVoiceModeActive,
+        setIsVoiceModeActive,
       }}
     >
       {children}
