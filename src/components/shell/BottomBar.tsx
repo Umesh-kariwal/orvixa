@@ -68,78 +68,122 @@ export const BottomBar: React.FC = () => {
   return (
     <div
       style={{
-        padding: '14px 18px',
-        backgroundColor: 'var(--bg-glass)',
-        backdropFilter: 'var(--glass-blur)',
-        WebkitBackdropFilter: 'var(--glass-blur)',
-        borderTop: '1px solid var(--border-color)',
+        padding: '16px 20px 24px 20px',
+        backgroundColor: 'var(--bg-primary)',
         display: 'flex',
         flexDirection: 'column',
-        gap: '10px',
+        gap: '8px',
         alignItems: 'center',
-        boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.03)',
+        width: '100%',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', maxWidth: isExpanded ? '850px' : '100%' }}>
-        {/* Compact Screen Analysis Trigger Icon (Law 3 Privacy Rules) */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleScanScreen}
-          disabled={!isContextReady}
-          title={isContextReady ? "Analyze Screen Content (Explicit User Permission)" : "Waiting for active page context synchronization..."}
-          style={{ padding: '8px', opacity: isContextReady ? 1 : 0.4, cursor: isContextReady ? 'pointer' : 'not-allowed' }}
-        >
-          <Scan size={16} style={{ color: isContextReady ? 'var(--brand-primary)' : 'var(--text-muted)' }} />
-        </Button>
-
-        {/* Input Prompt Box */}
-        <input
-          type="text"
+      <div 
+        style={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          width: '100%', 
+          maxWidth: isExpanded ? '800px' : '100%',
+          backgroundColor: 'var(--bg-surface)',
+          border: isFocused ? '1px solid var(--brand-primary)' : '1px solid var(--border-color)',
+          borderRadius: '20px',
+          padding: '8px 12px',
+          boxShadow: isFocused ? 'var(--shadow-aura)' : 'var(--shadow-sm)',
+          transition: 'all var(--motion-fast) var(--easing-default)',
+        }}
+      >
+        <textarea
+          rows={1}
           placeholder="Ask Orvixa to explain, hint, or teach..."
           value={promptInput}
           onChange={(e) => setPromptInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              handleSend();
+            }
+          }}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           style={{
-            flex: 1,
-            padding: '9px 14px',
-            borderRadius: 'var(--radius-md)',
-            backgroundColor: 'var(--bg-surface-elevated)',
-            border: isFocused ? '1px solid var(--brand-primary)' : '1px solid var(--border-color)',
-            boxShadow: isFocused ? 'var(--shadow-aura)' : 'none',
+            width: '100%',
+            backgroundColor: 'transparent',
+            border: 'none',
             color: 'var(--text-primary)',
             fontSize: '0.85rem',
             outline: 'none',
             fontFamily: 'var(--font-sans)',
-            transition: 'all var(--motion-fast) var(--easing-default)',
+            resize: 'none',
+            maxHeight: '120px',
+            padding: '4px 6px',
+            lineHeight: '1.5',
           }}
         />
 
-        {/* Voice Assistant Activation Trigger (ChatGPT-Style Headphone Icon) */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setIsVoiceModeActive(true)}
-          title="Start Immersive Voice Conversation"
-          style={{ padding: '8px', cursor: 'pointer' }}
-        >
-          <Headphones size={16} style={{ color: 'var(--text-muted)' }} />
-        </Button>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginTop: '6px',
+          paddingTop: '6px',
+          borderTop: promptInput.trim() || isFocused ? '1px solid var(--border-color)' : '1px solid transparent',
+          transition: 'border-color var(--motion-fast) var(--easing-default)',
+        }}>
+          {/* Left Actions */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleScanScreen}
+              disabled={!isContextReady}
+              title={isContextReady ? "Analyze Screen Content" : "Waiting for page context..."}
+              style={{ 
+                padding: '6px', 
+                borderRadius: '50%',
+                width: '32px',
+                height: '32px',
+                opacity: isContextReady ? 1 : 0.4, 
+                cursor: isContextReady ? 'pointer' : 'not-allowed' 
+              }}
+            >
+              <Scan size={14} style={{ color: isContextReady ? 'var(--brand-primary)' : 'var(--text-muted)' }} />
+            </Button>
 
-        <Button 
-          variant="primary" 
-          size="sm" 
-          onClick={handleSend} 
-          disabled={!promptInput.trim()}
-          style={{
-            boxShadow: promptInput.trim() ? '0 2px 8px rgba(124, 58, 237, 0.25)' : 'none',
-            transition: 'all var(--motion-fast) var(--easing-default)',
-          }}
-        >
-          <CornerDownLeft size={14} />
-        </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsVoiceModeActive(true)}
+              title="Start Voice Session"
+              style={{ 
+                padding: '6px',
+                borderRadius: '50%',
+                width: '32px',
+                height: '32px',
+                cursor: 'pointer' 
+              }}
+            >
+              <Headphones size={14} style={{ color: 'var(--text-muted)' }} />
+            </Button>
+          </div>
+
+          {/* Right Send Button */}
+          <Button 
+            variant="primary" 
+            size="sm" 
+            onClick={handleSend} 
+            disabled={!promptInput.trim()}
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              padding: 0,
+              backgroundColor: promptInput.trim() ? 'var(--brand-primary)' : 'var(--border-color)',
+              color: promptInput.trim() ? '#ffffff' : 'var(--text-muted)',
+              transition: 'all var(--motion-fast) var(--easing-default)',
+            }}
+          >
+            <CornerDownLeft size={13} />
+          </Button>
+        </div>
       </div>
 
       {renderPerformanceMetrics()}
