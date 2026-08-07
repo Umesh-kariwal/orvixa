@@ -8,7 +8,7 @@ import { OrvixaIntentRenderer } from '@/components/renderers/OrvixaIntentRendere
 import { OnboardingView } from '@/components/views/OnboardingView';
 import { SettingsView } from '@/components/views/SettingsView';
 import { PrivacyDashboard } from '@/components/views/PrivacyDashboard';
-import { Sparkles, AlertCircle, RefreshCw, Trash2, ArrowRight } from 'lucide-react';
+import { Sparkles, AlertCircle, RefreshCw, ArrowRight } from 'lucide-react';
 
 export const ContentAreaHost: React.FC = () => {
   const {
@@ -19,7 +19,6 @@ export const ContentAreaHost: React.FC = () => {
     conversationHistory,
     thinkingStep,
     currentView,
-    resetSession,
     executeAction,
     activeContext,
     isExpanded,
@@ -36,17 +35,6 @@ export const ContentAreaHost: React.FC = () => {
     return <PrivacyDashboard />;
   }
 
-  // Clear Session Action Link
-  const renderResetHeader = () => {
-    if (conversationHistory.length === 0) return null;
-    return (
-      <div style={{ display: 'flex', justifyContent: 'flex-end', paddingBottom: '12px' }}>
-        <Button variant="ghost" size="sm" onClick={resetSession} style={{ color: 'var(--rose-primary)', gap: '4px' }}>
-          <Trash2 size={13} /> Reset Learning Session
-        </Button>
-      </div>
-    );
-  };
 
   // Adaptive Follow-up Choices (Dynamic learning path builder)
   const renderFollowUps = () => {
@@ -457,7 +445,6 @@ export const ContentAreaHost: React.FC = () => {
       margin: isExpanded ? '0 auto' : '0',
       width: '100%'
     }}>
-      {renderResetHeader()}
 
       {/* Render Conversation Thread History */}
       {conversationHistory.map((msg, index) => {

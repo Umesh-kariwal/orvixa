@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Card } from '@/components/ui/Card';
 import type { RendererComponentProps } from '../core/types';
 import { Copy, Check } from 'lucide-react';
 
@@ -462,10 +461,8 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
   flushList(lines.length);
 
   return (
-    <Card variant="glass" style={{ padding: '12px 14px', width: '100%' }}>
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
-        {renderedBlocks}
-      </div>
-    </Card>
+    <div style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
+      {renderedBlocks}
+    </div>
   );
 };

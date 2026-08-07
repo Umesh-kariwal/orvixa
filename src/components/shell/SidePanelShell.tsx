@@ -1,7 +1,7 @@
 import React, { useRef, useCallback, useEffect } from 'react';
 import { useSidePanel } from '@/hooks/useSidePanel';
 import { TopBar } from './TopBar';
-import { ActionPillsRow } from './ActionPillsRow';
+
 import { ContentAreaHost } from './ContentAreaHost';
 import { BottomBar } from './BottomBar';
 import { DashboardSidebar } from './DashboardSidebar';
@@ -205,7 +205,7 @@ export const SidePanelShell: React.FC = () => {
         <div onMouseDown={handleFloatingHeaderMouseDown} style={{ cursor: 'move' }}>
           <TopBar />
         </div>
-        {isLearning && <ActionPillsRow />}
+
         <div ref={scrollAreaRef} style={{ flex: 1, overflowY: 'auto' }}>
           <ContentAreaHost />
         </div>
@@ -351,7 +351,7 @@ export const SidePanelShell: React.FC = () => {
           <div style={{ display: 'flex', flex: 1, overflow: 'hidden', width: '100%' }}>
             {/* Left Column: Chat Area */}
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, height: '100%' }}>
-              {isLearning && <ActionPillsRow />}
+
               <div ref={scrollAreaRef} style={{ flex: 1, overflowY: 'auto' }}>
                 <ContentAreaHost />
               </div>
@@ -363,7 +363,7 @@ export const SidePanelShell: React.FC = () => {
           </div>
         ) : (
           <>
-            {isLearning && <ActionPillsRow />}
+
             <div ref={scrollAreaRef} style={{ flex: 1, overflowY: 'auto' }}>
               <ContentAreaHost />
             </div>

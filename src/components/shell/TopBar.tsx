@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   GraduationCap,
   Settings,
+  Trash2,
 } from 'lucide-react';
 
 export const TopBar: React.FC = () => {
@@ -22,6 +23,8 @@ export const TopBar: React.FC = () => {
     activeContext,
     currentView,
     setCurrentView,
+    resetSession,
+    conversationHistory,
   } = useSidePanel();
 
   const titleText = activeContext?.sanitized_summary || 'Universal Learning Copilot';
@@ -190,6 +193,19 @@ export const TopBar: React.FC = () => {
 
         {/* Right: Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {conversationHistory.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={resetSession}
+              title="Reset Chat Session"
+              aria-label="Reset Chat Session"
+              style={{ padding: '4px', color: 'var(--rose-primary)' }}
+            >
+              <Trash2 size={14} />
+            </Button>
+          )}
+
           <Button
             variant="ghost"
             size="sm"
