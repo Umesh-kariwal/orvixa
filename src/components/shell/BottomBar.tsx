@@ -63,16 +63,21 @@ export const BottomBar: React.FC = () => {
     );
   };
 
+  const [isFocused, setIsFocused] = useState(false);
+
   return (
     <div
       style={{
-        padding: '12px 16px',
-        backgroundColor: 'var(--bg-surface)',
+        padding: '14px 18px',
+        backgroundColor: 'var(--bg-glass)',
+        backdropFilter: 'var(--glass-blur)',
+        WebkitBackdropFilter: 'var(--glass-blur)',
         borderTop: '1px solid var(--border-color)',
         display: 'flex',
         flexDirection: 'column',
-        gap: '8px',
+        gap: '10px',
         alignItems: 'center',
+        boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.03)',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', maxWidth: isExpanded ? '850px' : '100%' }}>
@@ -95,16 +100,20 @@ export const BottomBar: React.FC = () => {
           value={promptInput}
           onChange={(e) => setPromptInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
           style={{
             flex: 1,
-            padding: '8px 12px',
+            padding: '9px 14px',
             borderRadius: 'var(--radius-md)',
-            backgroundColor: 'var(--bg-primary)',
-            border: '1px solid var(--border-color)',
+            backgroundColor: 'var(--bg-surface-elevated)',
+            border: isFocused ? '1px solid var(--brand-primary)' : '1px solid var(--border-color)',
+            boxShadow: isFocused ? 'var(--shadow-aura)' : 'none',
             color: 'var(--text-primary)',
             fontSize: '0.85rem',
             outline: 'none',
             fontFamily: 'var(--font-sans)',
+            transition: 'all var(--motion-fast) var(--easing-default)',
           }}
         />
 
@@ -119,7 +128,16 @@ export const BottomBar: React.FC = () => {
           <Headphones size={16} style={{ color: 'var(--text-muted)' }} />
         </Button>
 
-        <Button variant="primary" size="sm" onClick={handleSend} disabled={!promptInput.trim()}>
+        <Button 
+          variant="primary" 
+          size="sm" 
+          onClick={handleSend} 
+          disabled={!promptInput.trim()}
+          style={{
+            boxShadow: promptInput.trim() ? '0 2px 8px rgba(124, 58, 237, 0.25)' : 'none',
+            transition: 'all var(--motion-fast) var(--easing-default)',
+          }}
+        >
           <CornerDownLeft size={14} />
         </Button>
       </div>

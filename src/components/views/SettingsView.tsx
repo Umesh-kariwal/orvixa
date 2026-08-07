@@ -24,13 +24,14 @@ export const SettingsView: React.FC = () => {
 
   return (
     <div style={{
-      padding: '20px',
+      padding: '24px',
       display: 'flex',
       flexDirection: 'column',
       gap: '20px',
       color: 'var(--text-primary)',
-      backgroundColor: 'var(--bg-panel)',
-      fontFamily: 'var(--font-family)',
+      backgroundColor: 'var(--bg-primary)',
+      fontFamily: 'var(--font-sans)',
+      minHeight: '100%',
     }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -43,16 +44,19 @@ export const SettingsView: React.FC = () => {
             fontSize: '18px',
             cursor: 'pointer',
             padding: '4px',
+            transition: 'transform 0.15s ease',
           }}
+          onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateX(-2px)')}
+          onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateX(0)')}
         >
           ←
         </button>
-        <span style={{ fontSize: '18px', fontWeight: 700 }}>Settings</span>
+        <span style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.02em' }}>Settings</span>
       </div>
 
       {/* API Configuration */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+        <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
           Google Gemini API Key
         </label>
         <div style={{ display: 'flex', gap: '6px' }}>
@@ -63,55 +67,76 @@ export const SettingsView: React.FC = () => {
             placeholder="AI provider API credentials..."
             style={{
               flex: 1,
-              padding: '10px 12px',
-              borderRadius: '8px',
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border-light)',
+              padding: '10px 14px',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--bg-surface-elevated)',
+              border: '1px solid var(--border-color)',
               color: 'var(--text-primary)',
-              fontSize: '13px',
+              fontSize: '0.8rem',
               outline: 'none',
+              transition: 'border-color 0.2s ease',
             }}
+            onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--brand-primary)')}
+            onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--border-color)')}
           />
           <button
             onClick={() => setShowKey(!showKey)}
             style={{
-              padding: '10px',
-              borderRadius: '8px',
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid var(--border-light)',
+              padding: '10px 14px',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border-color)',
               color: 'var(--text-primary)',
-              fontSize: '12px',
+              fontSize: '0.75rem',
+              fontWeight: 600,
               cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'var(--bg-surface-elevated)';
+              e.currentTarget.style.borderColor = 'var(--border-highlight)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'var(--bg-surface)';
+              e.currentTarget.style.borderColor = 'var(--border-color)';
             }}
           >
             {showKey ? 'Hide' : 'Show'}
           </button>
         </div>
-        <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+        <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
           Custom keys take priority over default settings. Leave blank to run local stub fallbacks.
         </p>
       </div>
 
       {/* Preferences Options */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1px solid var(--border-light)', paddingTop: '16px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: '13px', fontWeight: 600 }}>Dock Layout Mode</div>
-            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+            <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>Dock Layout Mode</div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
               Attach sidebar dock side-by-side or launch float
             </div>
           </div>
           <button
             onClick={togglePanelMode}
             style={{
-              padding: '6px 12px',
-              borderRadius: '6px',
-              background: panelMode === 'dock' ? '#a78bfa' : 'rgba(255, 255, 255, 0.05)',
-              border: 'none',
-              color: '#ffffff',
-              fontSize: '11px',
-              fontWeight: 600,
+              padding: '6px 14px',
+              borderRadius: 'var(--radius-sm)',
+              background: panelMode === 'dock' ? 'var(--brand-gradient)' : 'var(--bg-surface)',
+              border: panelMode === 'dock' ? 'none' : '1px solid var(--border-color)',
+              color: panelMode === 'dock' ? 'var(--text-inverse)' : 'var(--text-primary)',
+              fontSize: '0.7rem',
+              fontWeight: 700,
               cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: panelMode === 'dock' ? '0 2px 8px rgba(124, 58, 237, 0.2)' : 'none',
+            }}
+            onMouseEnter={(e) => {
+              if (panelMode !== 'dock') e.currentTarget.style.background = 'var(--bg-surface-elevated)';
+            }}
+            onMouseLeave={(e) => {
+              if (panelMode !== 'dock') e.currentTarget.style.background = 'var(--bg-surface)';
             }}
           >
             {panelMode.toUpperCase()}
@@ -120,22 +145,30 @@ export const SettingsView: React.FC = () => {
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: '13px', fontWeight: 600 }}>Sticky Panel Locking</div>
-            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+            <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>Sticky Panel Locking</div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
               Keep side panel locked even if clicking outside
             </div>
           </div>
           <button
             onClick={togglePin}
             style={{
-              padding: '6px 12px',
-              borderRadius: '6px',
-              background: isPinned ? '#10b981' : 'rgba(255, 255, 255, 0.05)',
-              border: 'none',
-              color: '#ffffff',
-              fontSize: '11px',
-              fontWeight: 600,
+              padding: '6px 14px',
+              borderRadius: 'var(--radius-sm)',
+              background: isPinned ? 'var(--emerald-primary)' : 'var(--bg-surface)',
+              border: isPinned ? 'none' : '1px solid var(--border-color)',
+              color: isPinned ? '#ffffff' : 'var(--text-primary)',
+              fontSize: '0.7rem',
+              fontWeight: 700,
               cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: isPinned ? 'var(--shadow-glow-emerald)' : 'none',
+            }}
+            onMouseEnter={(e) => {
+              if (!isPinned) e.currentTarget.style.background = 'var(--bg-surface-elevated)';
+            }}
+            onMouseLeave={(e) => {
+              if (!isPinned) e.currentTarget.style.background = 'var(--bg-surface)';
             }}
           >
             {isPinned ? 'STICKY' : 'AUTO-HIDE'}
@@ -144,11 +177,18 @@ export const SettingsView: React.FC = () => {
       </div>
 
       {/* Keyboard Shortcuts */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px solid var(--border-light)', paddingTop: '16px' }}>
-        <div style={{ fontSize: '13px', fontWeight: 600 }}>Configured Shortcut Keys</div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-secondary)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
+        <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>Configured Shortcut Keys</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
           <span>Toggle copilot panel:</span>
-          <kbd style={{ background: 'var(--bg-card)', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border-light)' }}>
+          <kbd style={{
+            background: 'var(--bg-surface-elevated)',
+            padding: '4px 8px',
+            borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--border-color)',
+            fontWeight: 'bold',
+            color: 'var(--text-primary)',
+          }}>
             Ctrl + Shift + Y
           </kbd>
         </div>
@@ -158,8 +198,8 @@ export const SettingsView: React.FC = () => {
       <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {saveStatus && (
           <div style={{
-            fontSize: '12px',
-            color: '#10b981',
+            fontSize: '0.75rem',
+            color: 'var(--emerald-primary)',
             textAlign: 'center',
             fontWeight: 600,
           }}>
@@ -170,13 +210,23 @@ export const SettingsView: React.FC = () => {
           onClick={handleSaveKey}
           style={{
             padding: '12px',
-            borderRadius: '8px',
-            background: 'linear-gradient(135deg, #a78bfa 0%, #ec4899 100%)',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--brand-gradient)',
             border: 'none',
-            color: '#ffffff',
-            fontWeight: 600,
+            color: 'var(--text-inverse)',
+            fontWeight: 700,
             cursor: 'pointer',
-            fontSize: '13px',
+            fontSize: '0.82rem',
+            transition: 'all 0.2s ease',
+            boxShadow: '0 4px 15px rgba(124, 58, 237, 0.3)',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 6px 20px rgba(124, 58, 237, 0.4)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 4px 15px rgba(124, 58, 237, 0.3)';
           }}
         >
           Save Changes

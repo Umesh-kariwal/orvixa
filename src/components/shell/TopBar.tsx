@@ -67,7 +67,9 @@ export const TopBar: React.FC = () => {
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '12px 16px',
-          backgroundColor: 'var(--bg-surface)',
+          backgroundColor: 'var(--bg-glass)',
+          backdropFilter: 'var(--glass-blur)',
+          WebkitBackdropFilter: 'var(--glass-blur)',
           borderBottom: '1px solid var(--border-color)',
           userSelect: 'none',
         }}
@@ -106,7 +108,9 @@ export const TopBar: React.FC = () => {
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '6px 12px',
-          backgroundColor: 'var(--bg-surface)',
+          backgroundColor: 'var(--bg-glass)',
+          backdropFilter: 'var(--glass-blur)',
+          WebkitBackdropFilter: 'var(--glass-blur)',
           borderBottom: '1px solid var(--border-color)',
           userSelect: 'none',
           width: '100%',
@@ -154,7 +158,9 @@ export const TopBar: React.FC = () => {
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '6px 12px',
-          backgroundColor: 'var(--bg-surface)',
+          backgroundColor: 'var(--bg-glass)',
+          backdropFilter: 'var(--glass-blur)',
+          WebkitBackdropFilter: 'var(--glass-blur)',
           borderBottom: '1px solid var(--border-color)',
         }}
       >

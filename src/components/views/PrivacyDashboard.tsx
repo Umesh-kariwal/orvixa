@@ -16,13 +16,14 @@ export const PrivacyDashboard: React.FC = () => {
 
   return (
     <div style={{
-      padding: '20px',
+      padding: '24px',
       display: 'flex',
       flexDirection: 'column',
       gap: '20px',
       color: 'var(--text-primary)',
-      backgroundColor: 'var(--bg-panel)',
-      fontFamily: 'var(--font-family)',
+      backgroundColor: 'var(--bg-primary)',
+      fontFamily: 'var(--font-sans)',
+      minHeight: '100%',
     }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -35,14 +36,17 @@ export const PrivacyDashboard: React.FC = () => {
             fontSize: '18px',
             cursor: 'pointer',
             padding: '4px',
+            transition: 'transform 0.15s ease',
           }}
+          onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateX(-2px)')}
+          onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateX(0)')}
         >
           ←
         </button>
-        <span style={{ fontSize: '18px', fontWeight: 700 }}>Privacy Dashboard</span>
+        <span style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.02em' }}>Privacy Dashboard</span>
       </div>
 
-      <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+      <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
         Orvixa is built on a **Privacy-First** architecture. We do not inspect your pages in the background, run analytics trackers, or monitor microphones. Web content is processed strictly after user actions.
       </p>
 
@@ -53,23 +57,34 @@ export const PrivacyDashboard: React.FC = () => {
             key={idx}
             style={{
               padding: '12px 14px',
-              borderRadius: '10px',
-              background: 'rgba(255, 255, 255, 0.03)',
-              border: '1px solid rgba(255, 255, 255, 0.05)',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border-color)',
+              boxShadow: 'var(--shadow-sm)',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.borderColor = 'var(--border-highlight)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.borderColor = 'var(--border-color)';
             }}
           >
-            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{m.label}</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{m.label}</span>
             <span
               style={{
-                fontSize: '11px',
+                fontSize: '0.72rem',
                 fontWeight: 700,
-                color: m.status === 'secure' ? '#10b981' : '#a78bfa',
-                background: m.status === 'secure' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(167, 139, 250, 0.1)',
-                padding: '4px 8px',
-                borderRadius: '6px',
+                color: m.status === 'secure' ? 'var(--emerald-primary)' : 'var(--brand-primary)',
+                background: m.status === 'secure' ? 'var(--emerald-bg)' : 'rgba(124, 58, 237, 0.08)',
+                border: m.status === 'secure' ? '1px solid var(--emerald-border)' : '1px solid rgba(124, 58, 237, 0.15)',
+                padding: '4px 10px',
+                borderRadius: 'var(--radius-pill)',
               }}
             >
               {m.value}
@@ -80,17 +95,18 @@ export const PrivacyDashboard: React.FC = () => {
 
       {/* Security Seal */}
       <div style={{
-        marginTop: '24px',
-        padding: '14px',
-        borderRadius: '12px',
-        background: 'rgba(16, 185, 129, 0.05)',
-        border: '1px solid rgba(16, 185, 129, 0.1)',
+        marginTop: '20px',
+        padding: '16px',
+        borderRadius: 'var(--radius-md)',
+        background: 'var(--emerald-bg)',
+        border: '1px solid var(--emerald-border)',
+        boxShadow: 'var(--shadow-glow-emerald)',
         textAlign: 'center',
       }}>
-        <div style={{ fontSize: '12px', fontWeight: 600, color: '#10b981', marginBottom: '4px' }}>
+        <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--emerald-primary)', marginBottom: '6px' }}>
           🛡️ Secured by Default
         </div>
-        <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+        <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: '1.45' }}>
           All requests are sanitized via local regular expression masks and stripped of sensitive data before leaving your browser.
         </p>
       </div>
