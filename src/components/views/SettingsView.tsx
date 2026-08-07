@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useSidePanel } from '@/hooks/useSidePanel';
+import { Button } from '@/components/ui/Button';
+import { Key, Layers, Shield, X, Eye, EyeOff, Save } from 'lucide-react';
 
 export const SettingsView: React.FC = () => {
   const {
@@ -24,213 +26,240 @@ export const SettingsView: React.FC = () => {
 
   return (
     <div style={{
-      padding: '24px',
       display: 'flex',
       flexDirection: 'column',
-      gap: '20px',
+      height: '100%',
       color: 'var(--text-primary)',
-      backgroundColor: 'var(--bg-primary)',
       fontFamily: 'var(--font-sans)',
-      minHeight: '100%',
+      userSelect: 'none',
     }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      {/* Drawer Header */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '16px 20px',
+        borderBottom: '1px solid var(--border-color)',
+        backgroundColor: 'var(--bg-surface)',
+      }}>
+        <span style={{ fontSize: '0.95rem', fontWeight: 800, letterSpacing: '-0.02em' }}>Settings</span>
         <button
           onClick={() => setCurrentView('learning')}
           style={{
             background: 'none',
             border: 'none',
-            color: 'var(--text-secondary)',
-            fontSize: '18px',
+            color: 'var(--text-muted)',
             cursor: 'pointer',
             padding: '4px',
-            transition: 'transform 0.15s ease',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'color var(--motion-fast) ease',
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateX(-2px)')}
-          onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateX(0)')}
+          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
         >
-          ←
+          <X size={16} />
         </button>
-        <span style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.02em' }}>Settings</span>
       </div>
 
-      {/* API Configuration */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-          Google Gemini API Key
-        </label>
-        <div style={{ display: 'flex', gap: '6px' }}>
-          <input
-            type={showKey ? 'text' : 'password'}
-            value={apiKeyInput}
-            onChange={(e) => setApiKeyInput(e.target.value)}
-            placeholder="AI provider API credentials..."
-            style={{
-              flex: 1,
-              padding: '10px 14px',
-              borderRadius: 'var(--radius-md)',
+      {/* Drawer Content */}
+      <div style={{
+        flex: 1,
+        overflowY: 'auto',
+        padding: '20px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '24px',
+      }}>
+        {/* API Key Section */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)' }}>
+            <Key size={14} style={{ color: 'var(--brand-primary)' }} />
+            <label style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+              Google Gemini API Key
+            </label>
+          </div>
+          
+          <div style={{ display: 'flex', position: 'relative', alignItems: 'center' }}>
+            <input
+              type={showKey ? 'text' : 'password'}
+              value={apiKeyInput}
+              onChange={(e) => setApiKeyInput(e.target.value)}
+              placeholder="Enter Gemini API key..."
+              style={{
+                width: '100%',
+                padding: '10px 40px 10px 14px',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--bg-surface-elevated)',
+                border: '1px solid var(--border-color)',
+                color: 'var(--text-primary)',
+                fontSize: '0.8rem',
+                outline: 'none',
+                fontFamily: 'var(--font-mono)',
+                transition: 'all var(--motion-fast) ease',
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = 'var(--brand-primary)';
+                e.currentTarget.style.boxShadow = 'var(--shadow-aura)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = 'var(--border-color)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            />
+            <button
+              onClick={() => setShowKey(!showKey)}
+              style={{
+                position: 'absolute',
+                right: '12px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--text-muted)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 0,
+              }}
+            >
+              {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
+            </button>
+          </div>
+          <p style={{ margin: 0, fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+            A custom API key is kept locally on your device and never sent to our servers. Leave blank to run local mock fallback settings.
+          </p>
+        </div>
+
+        {/* Layout Modes */}
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '16px', 
+          borderTop: '1px solid var(--border-color)', 
+          paddingTop: '20px' 
+        }}>
+          {/* Dock Layout Option */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0, flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 700 }}>
+                <Layers size={14} style={{ color: 'var(--brand-primary)' }} />
+                <span>Dock Layout Mode</span>
+              </div>
+              <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: '1.3' }}>
+                Dock side-by-side or run in a floating window.
+              </span>
+            </div>
+            <button
+              onClick={togglePanelMode}
+              style={{
+                padding: '6px 12px',
+                borderRadius: 'var(--radius-pill)',
+                background: panelMode === 'dock' ? 'var(--brand-gradient)' : 'var(--bg-surface-elevated)',
+                border: '1px solid var(--border-color)',
+                color: panelMode === 'dock' ? '#ffffff' : 'var(--text-secondary)',
+                fontSize: '0.68rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                transition: 'all var(--motion-fast) ease',
+              }}
+            >
+              {panelMode.toUpperCase()}
+            </button>
+          </div>
+
+          {/* Sticky Pinning */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0, flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 700 }}>
+                <Shield size={14} style={{ color: 'var(--emerald-primary)' }} />
+                <span>Sticky Panel Locking</span>
+              </div>
+              <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: '1.3' }}>
+                Keep sidebar pinned when clicking other page areas.
+              </span>
+            </div>
+            <button
+              onClick={togglePin}
+              style={{
+                padding: '6px 12px',
+                borderRadius: 'var(--radius-pill)',
+                background: isPinned ? 'var(--emerald-primary)' : 'var(--bg-surface-elevated)',
+                border: '1px solid var(--border-color)',
+                color: isPinned ? '#ffffff' : 'var(--text-secondary)',
+                fontSize: '0.68rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                transition: 'all var(--motion-fast) ease',
+              }}
+            >
+              {isPinned ? 'STICKY' : 'AUTO-HIDE'}
+            </button>
+          </div>
+        </div>
+
+        {/* Keyboard Shortcuts */}
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '10px', 
+          borderTop: '1px solid var(--border-color)', 
+          paddingTop: '20px' 
+        }}>
+          <span style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em', color: 'var(--text-secondary)' }}>
+            Keyboard Shortcuts
+          </span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem' }}>
+            <span style={{ color: 'var(--text-secondary)' }}>Toggle copilot panel:</span>
+            <kbd style={{
               background: 'var(--bg-surface-elevated)',
+              padding: '4px 8px',
+              borderRadius: '6px',
               border: '1px solid var(--border-color)',
+              fontWeight: 800,
+              fontSize: '0.65rem',
               color: 'var(--text-primary)',
-              fontSize: '0.8rem',
-              outline: 'none',
-              transition: 'border-color 0.2s ease',
-            }}
-            onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--brand-primary)')}
-            onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--border-color)')}
-          />
-          <button
-            onClick={() => setShowKey(!showKey)}
-            style={{
-              padding: '10px 14px',
-              borderRadius: 'var(--radius-md)',
-              background: 'var(--bg-surface)',
-              border: '1px solid var(--border-color)',
-              color: 'var(--text-primary)',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--bg-surface-elevated)';
-              e.currentTarget.style.borderColor = 'var(--border-highlight)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'var(--bg-surface)';
-              e.currentTarget.style.borderColor = 'var(--border-color)';
-            }}
-          >
-            {showKey ? 'Hide' : 'Show'}
-          </button>
-        </div>
-        <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
-          Custom keys take priority over default settings. Leave blank to run local stub fallbacks.
-        </p>
-      </div>
-
-      {/* Preferences Options */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>Dock Layout Mode</div>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-              Attach sidebar dock side-by-side or launch float
-            </div>
+            }}>
+              Ctrl + Shift + Y
+            </kbd>
           </div>
-          <button
-            onClick={togglePanelMode}
-            style={{
-              padding: '6px 14px',
-              borderRadius: 'var(--radius-sm)',
-              background: panelMode === 'dock' ? 'var(--brand-gradient)' : 'var(--bg-surface)',
-              border: panelMode === 'dock' ? 'none' : '1px solid var(--border-color)',
-              color: panelMode === 'dock' ? 'var(--text-inverse)' : 'var(--text-primary)',
-              fontSize: '0.7rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              boxShadow: panelMode === 'dock' ? '0 2px 8px rgba(124, 58, 237, 0.2)' : 'none',
-            }}
-            onMouseEnter={(e) => {
-              if (panelMode !== 'dock') e.currentTarget.style.background = 'var(--bg-surface-elevated)';
-            }}
-            onMouseLeave={(e) => {
-              if (panelMode !== 'dock') e.currentTarget.style.background = 'var(--bg-surface)';
-            }}
-          >
-            {panelMode.toUpperCase()}
-          </button>
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>Sticky Panel Locking</div>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-              Keep side panel locked even if clicking outside
-            </div>
-          </div>
-          <button
-            onClick={togglePin}
-            style={{
-              padding: '6px 14px',
-              borderRadius: 'var(--radius-sm)',
-              background: isPinned ? 'var(--emerald-primary)' : 'var(--bg-surface)',
-              border: isPinned ? 'none' : '1px solid var(--border-color)',
-              color: isPinned ? '#ffffff' : 'var(--text-primary)',
-              fontSize: '0.7rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              boxShadow: isPinned ? 'var(--shadow-glow-emerald)' : 'none',
-            }}
-            onMouseEnter={(e) => {
-              if (!isPinned) e.currentTarget.style.background = 'var(--bg-surface-elevated)';
-            }}
-            onMouseLeave={(e) => {
-              if (!isPinned) e.currentTarget.style.background = 'var(--bg-surface)';
-            }}
-          >
-            {isPinned ? 'STICKY' : 'AUTO-HIDE'}
-          </button>
         </div>
       </div>
 
-      {/* Keyboard Shortcuts */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
-        <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>Configured Shortcut Keys</div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
-          <span>Toggle copilot panel:</span>
-          <kbd style={{
-            background: 'var(--bg-surface-elevated)',
-            padding: '4px 8px',
-            borderRadius: 'var(--radius-sm)',
-            border: '1px solid var(--border-color)',
-            fontWeight: 'bold',
-            color: 'var(--text-primary)',
-          }}>
-            Ctrl + Shift + Y
-          </kbd>
-        </div>
-      </div>
-
-      {/* Actions */}
-      <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      {/* Drawer Footer Actions */}
+      <div style={{
+        padding: '16px 20px',
+        borderTop: '1px solid var(--border-color)',
+        backgroundColor: 'var(--bg-surface)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+      }}>
         {saveStatus && (
           <div style={{
-            fontSize: '0.75rem',
+            fontSize: '0.72rem',
             color: 'var(--emerald-primary)',
             textAlign: 'center',
-            fontWeight: 600,
+            fontWeight: 700,
+            marginBottom: '4px',
           }}>
             {saveStatus}
           </div>
         )}
-        <button
+        <Button
           onClick={handleSaveKey}
+          variant="primary"
           style={{
-            padding: '12px',
-            borderRadius: 'var(--radius-md)',
-            background: 'var(--brand-gradient)',
-            border: 'none',
-            color: 'var(--text-inverse)',
-            fontWeight: 700,
-            cursor: 'pointer',
-            fontSize: '0.82rem',
-            transition: 'all 0.2s ease',
-            boxShadow: '0 4px 15px rgba(124, 58, 237, 0.3)',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 6px 20px rgba(124, 58, 237, 0.4)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 4px 15px rgba(124, 58, 237, 0.3)';
+            width: '100%',
+            height: '38px',
+            fontSize: '0.8rem',
+            gap: '8px',
+            borderRadius: '20px',
           }}
         >
-          Save Changes
-        </button>
+          <Save size={14} />
+          Save Settings
+        </Button>
       </div>
     </div>
   );

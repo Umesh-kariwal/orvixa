@@ -6,8 +6,6 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { OrvixaIntentRenderer } from '@/components/renderers/OrvixaIntentRenderer';
 import { OnboardingView } from '@/components/views/OnboardingView';
-import { SettingsView } from '@/components/views/SettingsView';
-import { PrivacyDashboard } from '@/components/views/PrivacyDashboard';
 import { Sparkles, AlertCircle, RefreshCw, ArrowRight, Compass, HelpCircle, BookOpen, Award } from 'lucide-react';
 
 export const ContentAreaHost: React.FC = () => {
@@ -27,12 +25,6 @@ export const ContentAreaHost: React.FC = () => {
   // Route Views based on Current Settings View Selection
   if (currentView === 'onboarding') {
     return <OnboardingView />;
-  }
-  if (currentView === 'settings') {
-    return <SettingsView />;
-  }
-  if (currentView === 'privacy') {
-    return <PrivacyDashboard />;
   }
 
 

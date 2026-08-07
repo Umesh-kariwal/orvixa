@@ -6,6 +6,8 @@ import { ContentAreaHost } from './ContentAreaHost';
 import { BottomBar } from './BottomBar';
 import { DashboardSidebar } from './DashboardSidebar';
 import { VoiceOverlay } from './VoiceOverlay';
+import { SettingsView } from '../views/SettingsView';
+import { PrivacyDashboard } from '../views/PrivacyDashboard';
 
 export const SidePanelShell: React.FC = () => {
   const {
@@ -18,6 +20,7 @@ export const SidePanelShell: React.FC = () => {
     setFloatingPosition,
     floatingSize,
     currentView,
+    setCurrentView,
     conversationHistory,
     streamingText,
   } = useSidePanel();
@@ -176,7 +179,47 @@ export const SidePanelShell: React.FC = () => {
     return null;
   }
 
-  const isLearning = currentView === 'learning';
+  const renderOverlayDrawer = () => {
+    if (currentView !== 'settings' && currentView !== 'privacy') return null;
+    return (
+      <div 
+        onClick={() => setCurrentView('learning')}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          zIndex: 1000000,
+          backgroundColor: 'rgba(0, 0, 0, 0.4)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+          display: 'flex',
+          justifyContent: 'flex-end',
+        }}
+      >
+        <div 
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            width: '85%',
+            maxWidth: '320px',
+            height: '100%',
+            backgroundColor: 'var(--bg-surface)',
+            borderLeft: '1px solid var(--border-color)',
+            boxShadow: 'var(--shadow-lg)',
+            display: 'flex',
+            flexDirection: 'column',
+            backdropFilter: 'var(--glass-blur)',
+            WebkitBackdropFilter: 'var(--glass-blur)',
+          }}
+        >
+          {currentView === 'settings' ? <SettingsView /> : <PrivacyDashboard />}
+        </div>
+      </div>
+    );
+  };
+
+  const isLearning = currentView === 'learning' || currentView === 'settings' || currentView === 'privacy';
 
   // FLOATING MODE STYLES
   if (panelMode === 'floating') {
@@ -298,6 +341,7 @@ export const SidePanelShell: React.FC = () => {
             />
           </>
         )}
+        {renderOverlayDrawer()}
       </div>
     );
   }
@@ -323,6 +367,7 @@ export const SidePanelShell: React.FC = () => {
           flexDirection: 'column',
           transition: isDraggingRef.current ? 'none' : 'transform 150ms cubic-bezier(0.16, 1, 0.3, 1), width 150ms ease',
           fontFamily: 'var(--font-sans)',
+          overflow: 'hidden',
         }}
       >
         {/* 60FPS Resizable Left Edge Drag Handle */}
@@ -371,6 +416,7 @@ export const SidePanelShell: React.FC = () => {
           </>
         )}
         <VoiceOverlay />
+        {renderOverlayDrawer()}
       </div>
   );
 };

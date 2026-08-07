@@ -1,13 +1,11 @@
 import React from 'react';
 import { useSidePanel } from '@/hooks/useSidePanel';
-import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
   X,
   Maximize2,
   Minimize2,
   Layers,
-  ShieldCheck,
   GraduationCap,
   Settings,
   Trash2,
@@ -153,46 +151,103 @@ export const TopBar: React.FC = () => {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', userSelect: 'none' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', userSelect: 'none', borderBottom: '1px solid var(--border-color)' }}>
       {/* Row 1: Header Brand & Application Controls */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '6px 12px',
+          padding: '10px 16px',
           backgroundColor: 'var(--bg-glass)',
           backdropFilter: 'var(--glass-blur)',
           WebkitBackdropFilter: 'var(--glass-blur)',
-          borderBottom: '1px solid var(--border-color)',
         }}
       >
         {/* Left: Brand Logo & Title */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div
             onClick={() => setCurrentView('learning')}
             style={{
-              width: '20px',
-              height: '20px',
-              borderRadius: 'var(--radius-sm)',
+              width: '24px',
+              height: '24px',
+              borderRadius: '8px',
               backgroundColor: 'var(--brand-primary)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               color: '#ffffff',
               cursor: 'pointer',
+              boxShadow: 'var(--shadow-sm)',
             }}
             title="Return to Learning Thread"
           >
-            <GraduationCap size={12} />
+            <GraduationCap size={13} />
           </div>
-          <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '0.5px' }}>
-            Orvixa
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+              Orvixa
+            </span>
+            {activeContext && activeContext.pageContext ? (
+              <span 
+                style={{ 
+                  width: '6px', 
+                  height: '6px', 
+                  borderRadius: '50%', 
+                  backgroundColor: 'var(--emerald-primary)',
+                  boxShadow: '0 0 6px var(--emerald-primary)',
+                  display: 'inline-block',
+                  cursor: 'help',
+                }} 
+                title={`Synced Context: ${titleText}`}
+              />
+            ) : (
+              <span 
+                style={{ 
+                  width: '6px', 
+                  height: '6px', 
+                  borderRadius: '50%', 
+                  backgroundColor: 'var(--amber-primary)',
+                  boxShadow: '0 0 6px var(--amber-primary)',
+                  display: 'inline-block',
+                  cursor: 'help',
+                }} 
+                title="Synchronizing page elements..."
+              />
+            )}
+          </div>
         </div>
 
+        {/* Center: Full Context Badge capsule (Only when expanded) */}
+        {isExpanded && activeContext && activeContext.pageContext && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            backgroundColor: 'rgba(16, 185, 129, 0.08)',
+            border: '1px solid rgba(16, 185, 129, 0.15)',
+            padding: '4px 12px',
+            borderRadius: '20px',
+            fontSize: '0.68rem',
+            color: 'var(--emerald-primary)',
+            fontWeight: 700,
+            maxWidth: '320px',
+          }}>
+            <span style={{ 
+              width: '4px', 
+              height: '4px', 
+              borderRadius: '50%', 
+              backgroundColor: '#10b981',
+              display: 'inline-block' 
+            }} />
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {getContextBadgeLabel()}: {titleText}
+            </span>
+          </div>
+        )}
+
         {/* Right: Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingRight: '4px' }}>
           {conversationHistory.length > 0 && (
             <Button
               variant="ghost"
@@ -200,9 +255,9 @@ export const TopBar: React.FC = () => {
               onClick={resetSession}
               title="Reset Chat Session"
               aria-label="Reset Chat Session"
-              style={{ padding: '4px', color: 'var(--rose-primary)' }}
+              style={{ padding: '6px', color: 'var(--rose-primary)', width: '28px', height: '28px', borderRadius: '50%' }}
             >
-              <Trash2 size={14} />
+              <Trash2 size={13} />
             </Button>
           )}
 
@@ -212,9 +267,9 @@ export const TopBar: React.FC = () => {
             onClick={() => setCurrentView(currentView === 'settings' ? 'learning' : 'settings')}
             title="Settings Configuration"
             aria-label="Settings Configuration"
-            style={{ padding: '4px' }}
+            style={{ padding: '6px', width: '28px', height: '28px', borderRadius: '50%' }}
           >
-            <Settings size={14} style={{ color: currentView === 'settings' ? 'var(--brand-primary)' : 'inherit' }} />
+            <Settings size={13} style={{ color: currentView === 'settings' ? 'var(--brand-primary)' : 'inherit' }} />
           </Button>
 
           <Button 
@@ -223,9 +278,9 @@ export const TopBar: React.FC = () => {
             onClick={togglePanelMode} 
             title={`Switch to ${panelMode === 'dock' ? 'Floating' : 'Dock'} Mode`}
             aria-label={`Switch to ${panelMode === 'dock' ? 'Floating' : 'Dock'} Mode`}
-            style={{ padding: '4px' }}
+            style={{ padding: '6px', width: '28px', height: '28px', borderRadius: '50%' }}
           >
-            <Layers size={14} />
+            <Layers size={13} />
           </Button>
 
           <Button 
@@ -234,9 +289,9 @@ export const TopBar: React.FC = () => {
             onClick={toggleExpand} 
             title={isExpanded ? 'Restore Dock' : 'Expand Panel'}
             aria-label={isExpanded ? 'Restore Dock' : 'Expand Panel'}
-            style={{ padding: '4px' }}
+            style={{ padding: '6px', width: '28px', height: '28px', borderRadius: '50%' }}
           >
-            {isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            {isExpanded ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
           </Button>
 
           <Button 
@@ -245,59 +300,10 @@ export const TopBar: React.FC = () => {
             onClick={closePanel} 
             title="Collapse Panel (Esc)"
             aria-label="Collapse Panel"
-            style={{ padding: '4px' }}
+            style={{ padding: '6px', width: '28px', height: '28px', borderRadius: '50%' }}
           >
-            <X size={16} />
+            <X size={14} />
           </Button>
-        </div>
-      </div>
-
-      {/* Row 2: Active Page Context Information */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '4px 12px',
-          backgroundColor: 'var(--bg-primary)',
-          borderBottom: '1px solid var(--border-color)',
-        }}
-      >
-        {/* Left: Glowing indicator dot and Title */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flex: 1 }}>
-          <span 
-            style={{ 
-              width: '6px', 
-              height: '6px', 
-              borderRadius: '50%', 
-              backgroundColor: activeContext && activeContext.pageContext ? '#10b981' : '#f59e0b',
-              boxShadow: activeContext && activeContext.pageContext ? '0 0 8px #10b981' : '0 0 8px #f59e0b',
-              flexShrink: 0
-            }} 
-          />
-          <span 
-            style={{ 
-              fontSize: '0.72rem', 
-              color: 'var(--text-secondary)', 
-              fontWeight: 500,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-            title={titleText}
-          >
-            {titleText}
-          </span>
-        </div>
-
-        {/* Right: Badge */}
-        <div className="topbar-badge" style={{ flexShrink: 0, marginLeft: '8px' }}>
-          <Badge
-            variant={activeContext && activeContext.pageContext ? 'mastery' : 'amber'}
-            icon={<ShieldCheck size={10} />}
-          >
-            {getContextBadgeLabel()}
-          </Badge>
         </div>
       </div>
     </div>
