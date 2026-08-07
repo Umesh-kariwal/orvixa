@@ -15,6 +15,64 @@ from app.core.learning.prompt_builder import LearningPromptBuilder
 from app.core.config import settings
 from app.core.logging import logger
 
+class NvidiaKeyRotator:
+    """Enterprise-grade Nvidia API Key Rotator with cooldown/recovery mechanism."""
+    
+    _keys: List[str] = []
+    _cooldowns: Dict[str, float] = {}  # key -> timestamp when cooldown ends
+    _current_index: int = 0
+    _initialized: bool = False
+
+    @classmethod
+    def initialize(cls):
+        if cls._initialized:
+            return
+        from app.core.config import settings
+        import os
+        
+        # Resolve all keys from NVIDIA_API_KEYS (comma separated)
+        raw_keys = os.getenv("NVIDIA_API_KEYS", "")
+        keys_list = [k.strip() for k in raw_keys.split(",") if k.strip()]
+        
+        # Fallback to single key if pool is empty
+        if not keys_list:
+            single_key = getattr(settings, "NVIDIA_API_KEY", None) or os.getenv("NVIDIA_API_KEY")
+            if single_key and single_key.strip():
+                keys_list.append(single_key.strip())
+                
+        cls._keys = keys_list
+        cls._initialized = True
+
+    @classmethod
+    def get_key(cls) -> Optional[str]:
+        cls.initialize()
+        if not cls._keys:
+            return None
+            
+        now = time.time()
+        n = len(cls._keys)
+        for i in range(n):
+            idx = (cls._current_index + i) % n
+            key = cls._keys[idx]
+            
+            # Check cooldown status
+            cooldown_until = cls._cooldowns.get(key, 0.0)
+            if now >= cooldown_until:
+                cls._current_index = (idx + 1) % n
+                return key
+                
+        # Fallback if all are in cooldown
+        return cls._keys[0] if cls._keys else None
+
+    @classmethod
+    def report_failure(cls, key: str, cooldown_seconds: float = 60.0):
+        """Temporarily puts a failing key into cooldown mode (e.g. on 429)."""
+        cls.initialize()
+        if key in cls._keys:
+            logger.warning("NvidiaKeyRotator: Placing key %s... in cooldown for %d seconds", key[:15], cooldown_seconds)
+            cls._cooldowns[key] = time.time() + cooldown_seconds
+
+
 class NvidiaProvider(BaseAIProvider):
     """NVIDIA NIM LLM provider implementing BaseAIProvider.
     
@@ -22,7 +80,6 @@ class NvidiaProvider(BaseAIProvider):
     """
 
     def __init__(self):
-        self._api_key = getattr(settings, "NVIDIA_API_KEY", None) or os.getenv("NVIDIA_API_KEY")
         self._model = "meta/llama-3.1-8b-instruct"
         self._base_url = "https://integrate.api.nvidia.com/v1/chat/completions"
 
@@ -44,8 +101,7 @@ class NvidiaProvider(BaseAIProvider):
 
     async def get_health(self) -> bool:
         # Re-evaluate API key on health check
-        self._api_key = getattr(settings, "NVIDIA_API_KEY", None) or os.getenv("NVIDIA_API_KEY")
-        return bool(self._api_key and self._api_key.strip())
+        return bool(NvidiaKeyRotator.get_key())
 
     async def stream_intent(
         self,
@@ -61,8 +117,7 @@ class NvidiaProvider(BaseAIProvider):
         first_token_time: Optional[float] = None
         tokens_emitted = 0
 
-        self._api_key = getattr(settings, "NVIDIA_API_KEY", None) or os.getenv("NVIDIA_API_KEY")
-        resolved_key = custom_api_key or self._api_key
+        resolved_key = custom_api_key or NvidiaKeyRotator.get_key()
 
         # Detect image generation request
         query_lower = (prompt_text or "").lower()
@@ -195,6 +250,8 @@ class NvidiaProvider(BaseAIProvider):
                     async with client.stream("POST", self._base_url, headers=headers, json=body) as response:
                         if response.status_code != 200:
                             err_body = await response.aread()
+                            if not custom_api_key:
+                                NvidiaKeyRotator.report_failure(resolved_key)
                             raise Exception(f"Nvidia NIM API returned status {response.status_code}: {err_body.decode('utf-8')}")
                             
                         async for line in response.aiter_lines():
@@ -225,6 +282,8 @@ class NvidiaProvider(BaseAIProvider):
                                 except Exception:
                                     pass
             except Exception as err:
+                if not custom_api_key and resolved_key:
+                    NvidiaKeyRotator.report_failure(resolved_key)
                 logger.error("NvidiaProvider: Streaming failed: %s", err)
                 raise err
         else:
