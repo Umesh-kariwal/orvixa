@@ -8,7 +8,7 @@ import { OrvixaIntentRenderer } from '@/components/renderers/OrvixaIntentRendere
 import { OnboardingView } from '@/components/views/OnboardingView';
 import { SettingsView } from '@/components/views/SettingsView';
 import { PrivacyDashboard } from '@/components/views/PrivacyDashboard';
-import { Sparkles, AlertCircle, RefreshCw, ArrowRight } from 'lucide-react';
+import { Sparkles, AlertCircle, RefreshCw, ArrowRight, Compass, HelpCircle, BookOpen, Award } from 'lucide-react';
 
 export const ContentAreaHost: React.FC = () => {
   const {
@@ -283,39 +283,69 @@ export const ContentAreaHost: React.FC = () => {
     if (conversationHistory.length !== 0 || panelState !== 'READY') return null;
 
     const quickActions = [
-      { id: 'explain', title: 'Explain Concept', desc: 'Get a thorough, clear breakdown of what is on your screen right now.', icon: '💡' },
-      { id: 'hint', title: 'Socratic Hint Ladder', desc: 'Ask step-by-step questions to guide you to the solution without spoiling it.', icon: '🧠' },
-      { id: 'teach', title: 'Deep Walkthrough', desc: 'Go through a detailed walkthrough of the entire page content.', icon: '📘' },
-      { id: 'practice_quiz', title: 'Practice Quiz', desc: 'Generate test questions on the active topic to practice.', icon: '🎯' }
+      { id: 'explain', title: 'Explain Concept', desc: 'Get a thorough, clear breakdown of what is on your screen right now.', icon: <Compass size={18} /> },
+      { id: 'hint', title: 'Socratic Hint Ladder', desc: 'Ask step-by-step questions to guide you to the solution without spoiling it.', icon: <HelpCircle size={18} /> },
+      { id: 'teach', title: 'Deep Walkthrough', desc: 'Go through a detailed walkthrough of the entire page content.', icon: <BookOpen size={18} /> },
+      { id: 'practice_quiz', title: 'Practice Quiz', desc: 'Generate test questions on the active topic to practice.', icon: <Award size={18} /> }
     ];
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', padding: '10px 0' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '28px', padding: '16px 0' }}>
         {/* Welcome Hero */}
         <div style={{
           textAlign: 'center',
-          padding: '28px 20px',
+          padding: '36px 24px',
           borderRadius: 'var(--radius-lg)',
-          backgroundColor: 'var(--bg-surface-elevated)',
+          backgroundColor: 'var(--bg-surface)',
           border: '1px solid var(--border-color)',
+          boxShadow: 'var(--shadow-md)',
+          position: 'relative',
+          overflow: 'hidden',
+          backdropFilter: 'var(--glass-blur)',
+          WebkitBackdropFilter: 'var(--glass-blur)',
         }}>
-          <Heading level={2} style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '8px', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+          {/* Futuristic ambient radial glow */}
+          <div style={{
+            position: 'absolute',
+            top: '-50%',
+            left: '-50%',
+            width: '200%',
+            height: '200%',
+            background: 'radial-gradient(circle at center, rgba(129, 140, 248, 0.08) 0%, transparent 60%)',
+            pointerEvents: 'none',
+          }} />
+
+          <Heading level={2} style={{ 
+            fontSize: '1.4rem', 
+            fontWeight: 800, 
+            marginBottom: '8px', 
+            color: 'var(--text-primary)', 
+            letterSpacing: '-0.03em',
+            position: 'relative'
+          }}>
             Welcome to Orvixa
           </Heading>
-          <Text variant="secondary" style={{ fontSize: '0.8rem', maxWidth: '500px', margin: '0 auto', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+          <Text variant="secondary" style={{ 
+            fontSize: '0.82rem', 
+            maxWidth: '460px', 
+            margin: '0 auto', 
+            color: 'var(--text-secondary)', 
+            lineHeight: '1.5',
+            position: 'relative' 
+          }}>
             Your universal learning copilot. I am synced with your active browser screen. Select an option below or type a message to start.
           </Text>
         </div>
 
         {/* Quick Actions Grid */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <Text variant="secondary" style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--text-primary)', paddingLeft: '4px', letterSpacing: '-0.01em' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <Text variant="secondary" style={{ fontWeight: 800, fontSize: '0.8rem', color: 'var(--text-primary)', paddingLeft: '4px', letterSpacing: '-0.01em', textTransform: 'uppercase', opacity: 0.8 }}>
             What would you like to do?
           </Text>
           <div style={{
             display: 'grid',
             gridTemplateColumns: isExpanded ? 'repeat(2, 1fr)' : '1fr',
-            gap: '12px',
+            gap: '14px',
           }}>
             {quickActions.map((act) => (
               <div
@@ -327,30 +357,46 @@ export const ContentAreaHost: React.FC = () => {
                   icon: 'sparkles'
                 })}
                 style={{
-                  padding: '16px',
-                  borderRadius: 'var(--radius-md)',
+                  padding: '20px',
+                  borderRadius: 'var(--radius-lg)',
                   background: 'var(--bg-surface)',
                   border: '1px solid var(--border-color)',
                   cursor: 'pointer',
                   display: 'flex',
-                  gap: '14px',
+                  gap: '16px',
                   alignItems: 'flex-start',
-                  transition: 'all var(--motion-fast) var(--easing-default)',
+                  transition: 'all var(--motion-normal) var(--easing-default)',
+                  boxShadow: 'var(--shadow-sm)',
+                  backdropFilter: 'var(--glass-blur)',
+                  WebkitBackdropFilter: 'var(--glass-blur)',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'translateY(-2px)';
                   e.currentTarget.style.borderColor = 'var(--border-highlight)';
                   e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+                  e.currentTarget.style.background = 'var(--bg-surface-elevated)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = 'none';
                   e.currentTarget.style.borderColor = 'var(--border-color)';
-                  e.currentTarget.style.boxShadow = 'none';
+                  e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+                  e.currentTarget.style.background = 'var(--bg-surface)';
                 }}
               >
-                <span style={{ fontSize: '1.4rem', lineHeight: '1' }}>{act.icon}</span>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>{act.title}</span>
+                <div style={{
+                  padding: '10px',
+                  borderRadius: '12px',
+                  backgroundColor: 'rgba(129, 140, 248, 0.1)',
+                  color: 'var(--brand-primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                  {act.icon}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>{act.title}</span>
                   <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>{act.desc}</span>
                 </div>
               </div>
