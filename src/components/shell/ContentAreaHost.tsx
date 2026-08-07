@@ -295,10 +295,10 @@ export const ContentAreaHost: React.FC = () => {
     if (conversationHistory.length !== 0 || panelState !== 'READY') return null;
 
     const quickActions = [
-      { id: 'explain', title: 'Explain Concept', desc: 'Get a thorough, clear breakdown of what is on your screen right now.', icon: '💡', bg: 'linear-gradient(135deg, rgba(167, 139, 250, 0.15) 0%, rgba(139, 92, 246, 0.05) 100%)', border: 'rgba(167, 139, 250, 0.2)' },
-      { id: 'hint', title: 'Socratic Hint Ladder', desc: 'Ask step-by-step questions to guide you to the solution without spoiling it.', icon: '🧠', bg: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.05) 100%)', border: 'rgba(245, 158, 11, 0.2)' },
-      { id: 'teach', title: 'Deep Walkthrough', desc: 'Go through a detailed walkthrough of the entire page content.', icon: '📘', bg: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.05) 100%)', border: 'rgba(59, 130, 246, 0.2)' },
-      { id: 'practice_quiz', title: 'Practice Quiz', desc: 'Generate test questions on the active topic to practice.', icon: '🎯', bg: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.05) 100%)', border: 'rgba(16, 185, 129, 0.2)' }
+      { id: 'explain', title: 'Explain Concept', desc: 'Get a thorough, clear breakdown of what is on your screen right now.', icon: '💡' },
+      { id: 'hint', title: 'Socratic Hint Ladder', desc: 'Ask step-by-step questions to guide you to the solution without spoiling it.', icon: '🧠' },
+      { id: 'teach', title: 'Deep Walkthrough', desc: 'Go through a detailed walkthrough of the entire page content.', icon: '📘' },
+      { id: 'practice_quiz', title: 'Practice Quiz', desc: 'Generate test questions on the active topic to practice.', icon: '🎯' }
     ];
 
     return (
@@ -306,22 +306,22 @@ export const ContentAreaHost: React.FC = () => {
         {/* Welcome Hero */}
         <div style={{
           textAlign: 'center',
-          padding: '24px 16px',
-          borderRadius: '16px',
-          background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(236, 72, 153, 0.03) 100%)',
-          border: '1px solid rgba(255, 255, 255, 0.05)',
+          padding: '28px 20px',
+          borderRadius: 'var(--radius-lg)',
+          backgroundColor: 'var(--bg-surface-elevated)',
+          border: '1px solid var(--border-color)',
         }}>
-          <Heading level={2} style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '8px', background: 'linear-gradient(135deg, #a78bfa 0%, #ec4899 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <Heading level={2} style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '8px', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
             Welcome to Orvixa
           </Heading>
-          <Text variant="secondary" style={{ fontSize: '0.85rem', maxWidth: '500px', margin: '0 auto', color: 'var(--text-secondary)' }}>
+          <Text variant="secondary" style={{ fontSize: '0.8rem', maxWidth: '500px', margin: '0 auto', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
             Your universal learning copilot. I am synced with your active browser screen. Select an option below or type a message to start.
           </Text>
         </div>
 
         {/* Quick Actions Grid */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <Text variant="secondary" style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)', paddingLeft: '4px' }}>
+          <Text variant="secondary" style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--text-primary)', paddingLeft: '4px', letterSpacing: '-0.01em' }}>
             What would you like to do?
           </Text>
           <div style={{
@@ -340,21 +340,23 @@ export const ContentAreaHost: React.FC = () => {
                 })}
                 style={{
                   padding: '16px',
-                  borderRadius: '12px',
-                  background: act.bg,
-                  border: `1px solid ${act.border}`,
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border-color)',
                   cursor: 'pointer',
                   display: 'flex',
                   gap: '14px',
                   alignItems: 'flex-start',
-                  transition: 'transform 150ms ease, box-shadow 150ms ease',
+                  transition: 'all var(--motion-fast) var(--easing-default)',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.15)';
+                  e.currentTarget.style.borderColor = 'var(--border-highlight)';
+                  e.currentTarget.style.boxShadow = 'var(--shadow-md)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = 'none';
+                  e.currentTarget.style.borderColor = 'var(--border-color)';
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               >
