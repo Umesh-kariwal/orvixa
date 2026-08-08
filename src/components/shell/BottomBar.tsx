@@ -23,8 +23,9 @@ export const BottomBar: React.FC = () => {
 
   const [promptInput, setPromptInput] = useState<string>('');
   const [isFocused, setIsFocused] = useState<boolean>(false);
-  const [socraticMode, setSocraticMode] = useState<'explain' | 'hint' | 'challenge'>('hint');
+  const [socraticMode, setSocraticMode] = useState<'explain' | 'hint' | 'challenge'>('explain');
   const [showModeMenu, setShowModeMenu] = useState<boolean>(false);
+  const [showVoiceAlert, setShowVoiceAlert] = useState<boolean>(false);
   const [uploadStatus, setUploadStatus] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -300,6 +301,8 @@ export const BottomBar: React.FC = () => {
               onClick={() => {
                 if (isSpeechSupported) {
                   setIsVoiceModeActive(true);
+                } else {
+                  setShowVoiceAlert(true);
                 }
               }}
               title={isSpeechSupported ? "Start Voice Session" : "Voice mode is supported in Chrome. Edge WebView2 does not support speech recognition."}
@@ -308,11 +311,11 @@ export const BottomBar: React.FC = () => {
                 borderRadius: '50%',
                 width: '32px',
                 height: '32px',
-                opacity: isSpeechSupported ? 1 : 0.4,
-                cursor: isSpeechSupported ? 'pointer' : 'not-allowed'
+                cursor: 'pointer',
+                opacity: 1
               }}
             >
-              <Headphones size={14} style={{ color: isSpeechSupported ? 'var(--text-muted)' : 'var(--text-muted)' }} />
+              <Headphones size={14} style={{ color: 'var(--text-muted)' }} />
             </Button>
 
             {/* 4. Socratic Mode Selector Dropdown */}
@@ -431,6 +434,58 @@ export const BottomBar: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {/* Voice mode support alert card overlay */}
+      {showVoiceAlert && (
+        <div style={{
+          position: 'absolute',
+          bottom: '90px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '90%',
+          maxWidth: '380px',
+          backgroundColor: 'var(--bg-surface-elevated)',
+          border: '1px solid var(--border-color)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '16px',
+          boxShadow: 'var(--shadow-xl)',
+          zIndex: 1000,
+          animation: 'slideUp var(--motion-fast) ease',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--amber-primary)' }}>
+            <Sliders size={14} style={{ color: 'var(--amber-primary)' }} />
+            <span style={{ fontWeight: 800, fontSize: '0.78rem' }}>Voice Assistant Notice</span>
+          </div>
+          <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: '1.45' }}>
+            Voice dictation relies on the Google Chrome Web Speech API. Native WebView2 app containers on Windows do not support it. 
+            To use voice commands, open Orvixa in <strong>Google Chrome</strong>!
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+            <Button size="sm" variant="ghost" onClick={() => setShowVoiceAlert(false)} style={{ fontSize: '0.7rem' }}>Dismiss</Button>
+            <a 
+              href="https://orvixa.onrender.com" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              style={{
+                fontSize: '0.7rem',
+                fontWeight: 700,
+                color: '#ffffff',
+                backgroundColor: 'var(--brand-primary)',
+                padding: '6px 12px',
+                borderRadius: '20px',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+              }}
+            >
+              Open Web App
+            </a>
+          </div>
+        </div>
+      )}
 
       {renderPerformanceMetrics()}
     </div>

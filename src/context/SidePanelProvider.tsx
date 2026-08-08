@@ -8,7 +8,7 @@ import { StorageService } from '@/services/storageService';
 export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const initialPrefs = StorageService.getPreferences();
 
-  const [panelState, setPanelState] = useState<PanelState>('HIDDEN');
+  const [panelState, setPanelState] = useState<PanelState>('READY');
   const [widthPercent, setWidthPercentState] = useState<number>(initialPrefs.dockWidth);
   const [panelMode, setPanelMode] = useState<'dock' | 'floating'>(initialPrefs.panelMode);
   const [floatingPosition, setFloatingPositionState] = useState<{ x: number; y: number }>(initialPrefs.floatingPosition);
