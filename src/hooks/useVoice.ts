@@ -12,6 +12,7 @@ export const useVoice = () => {
   });
 
   const recognitionRef = useRef<any>(null);
+  const listeningRef = useRef<boolean>(false);
 
   useEffect(() => {
     localStorage.setItem('orvixa_voice_enabled', String(voiceEnabled));
@@ -35,7 +36,7 @@ export const useVoice = () => {
   }, [voiceLanguage]);
 
   const startListening = useCallback((onResult: (text: string) => void) => {
-    if (isListening) return;
+    if (listeningRef.current) return;
 
     try {
       setHasPermissionError(false);
@@ -49,6 +50,7 @@ export const useVoice = () => {
       }
 
       recognitionRef.current = rec;
+      listeningRef.current = true;
 
       rec.onstart = () => {
         setIsListening(true);
@@ -64,6 +66,7 @@ export const useVoice = () => {
       rec.onerror = (e: any) => {
         console.error('Speech recognition error:', e);
         setIsListening(false);
+        listeningRef.current = false;
         if (e.error === 'not-allowed') {
           setHasPermissionError(true);
         }
@@ -71,20 +74,27 @@ export const useVoice = () => {
 
       rec.onend = () => {
         setIsListening(false);
+        listeningRef.current = false;
       };
 
       rec.start();
     } catch (err) {
       console.error('Failed to start speech recognition:', err);
       setIsListening(false);
+      listeningRef.current = false;
     }
-  }, [isListening, initRecognition]);
+  }, [initRecognition]);
 
   const stopListening = useCallback(() => {
     if (recognitionRef.current) {
-      recognitionRef.current.stop();
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {
+        // Ignore if already stopped
+      }
     }
     setIsListening(false);
+    listeningRef.current = false;
   }, []);
 
   const speakText = useCallback((text: string) => {
