@@ -15,7 +15,7 @@ pub fn run() {
                   let _ = window.hide();
                 } else {
                   let _ = window.show();
-                  let _ = window.focus();
+                  let _ = window.set_focus();
                 }
               }
             }
