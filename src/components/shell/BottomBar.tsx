@@ -1,29 +1,91 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useSidePanel } from '@/hooks/useSidePanel';
 import { Button } from '@/components/ui/Button';
-import { CornerDownLeft, Scan, Headphones } from 'lucide-react';
+import { 
+  CornerDownLeft, 
+  Scan, 
+  Headphones, 
+  Paperclip, 
+  Link2, 
+  Sliders,
+  FileText
+} from 'lucide-react';
 
 export const BottomBar: React.FC = () => {
-  const { executeAction, performanceMetrics, activeContext, isExpanded, setIsVoiceModeActive } = useSidePanel();
+  const { 
+    executeAction, 
+    performanceMetrics, 
+    activeContext, 
+    setActiveContext,
+    isExpanded, 
+    setIsVoiceModeActive 
+  } = useSidePanel();
+
   const [promptInput, setPromptInput] = useState<string>('');
+  const [isFocused, setIsFocused] = useState<boolean>(false);
+  const [socraticMode, setSocraticMode] = useState<'explain' | 'hint' | 'challenge'>('hint');
+  const [showModeMenu, setShowModeMenu] = useState<boolean>(false);
+  const [uploadStatus, setUploadStatus] = useState<string>('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Check if voice Speech Recognition is supported in the active environment
+  const isSpeechSupported = typeof window !== 'undefined' && 
+    (!!(window as any).SpeechRecognition || !!(window as any).webkitSpeechRecognition);
 
   const isContextReady = !!(activeContext && activeContext.pageContext && activeContext.observed_title !== 'orvixa' && !activeContext.observed_url?.startsWith('chrome-extension://'));
-  console.log('[DEBUG-BOTTOMBAR] Context state:', {
-    hasActiveContext: !!activeContext,
-    hasPageContext: !!activeContext?.pageContext,
-    observed_title: activeContext?.observed_title,
-    observed_url: activeContext?.observed_url,
-    isContextReady
-  });
+
+  // Autodetect URL links pasted in input box
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const detectedUrlMatch = promptInput.match(urlRegex);
+  const detectedUrl = detectedUrlMatch ? detectedUrlMatch[0] : null;
 
   const handleSend = () => {
     if (!promptInput.trim()) return;
+
+    // If it's a URL, let's auto-sync the context first!
+    if (detectedUrl) {
+      setUploadStatus('Syncing URL context...');
+      const newContext = {
+        confidence_tier: 'HIGH' as const,
+        confidence_score: 1.0,
+        primary_intent: 'study',
+        recommended_actions: [],
+        side_panel_state: 'OPEN',
+        redacted: false,
+        sanitized_summary: `URL Context: ${detectedUrl}`,
+        pageContext: {
+          url: detectedUrl,
+          origin: 'https://orvixa-app.com',
+          hostname: 'orvixa-app.com',
+          pageTitle: detectedUrl.replace('https://', '').split('/')[0],
+          pageType: 'webpage',
+          platform: 'generic_web',
+          language: 'en',
+          selectedText: '',
+          visibleText: `Simulated document content parsed from URL: ${detectedUrl}. Ready for learning.`,
+          headings: [],
+          metadata: { contentType: 'webpage' },
+          topic: 'Auto-sync Web Study',
+          contentType: 'text/html',
+          difficulty: 'medium',
+          questionCount: 0,
+          confidence: 1.0,
+          timestamp: Date.now(),
+        }
+      };
+      setActiveContext(newContext);
+      setUploadStatus('Syncing completed!');
+      setTimeout(() => setUploadStatus(''), 2000);
+    }
+
+    // Map socraticMode to action parameters
     executeAction({
-      action_id: 'custom_learning_query',
-      label: promptInput.slice(0, 20),
+      action_id: socraticMode === 'hint' ? 'hint' : socraticMode === 'challenge' ? 'interview' : 'custom_learning_query',
+      label: socraticMode === 'hint' ? 'Socratic Hint' : socraticMode === 'challenge' ? 'Challenge Question' : 'Explainer',
       description: promptInput,
       icon: 'sparkles',
     });
+    
     setPromptInput('');
   };
 
@@ -37,11 +99,49 @@ export const BottomBar: React.FC = () => {
     });
   };
 
-  const renderPerformanceMetrics = () => {
-    // Only display metrics during local development (Vite dev mode)
-    if (!import.meta.env.DEV) return null;
-    if (!performanceMetrics) return null;
+  // Mock document/file upload uploader handler
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
+    setUploadStatus(`Uploading ${file.name}...`);
+    setTimeout(() => {
+      const newContext = {
+        confidence_tier: 'HIGH' as const,
+        confidence_score: 1.0,
+        primary_intent: 'study',
+        recommended_actions: [],
+        side_panel_state: 'OPEN',
+        redacted: false,
+        sanitized_summary: `Uploaded File: ${file.name}`,
+        pageContext: {
+          url: `file://${file.name}`,
+          origin: 'local://file',
+          hostname: 'localhost',
+          pageTitle: file.name,
+          pageType: 'document',
+          platform: 'local_file',
+          language: 'en',
+          selectedText: '',
+          visibleText: `Loaded local file content from ${file.name}. Prepared for Socratic query tutoring.`,
+          headings: [],
+          metadata: { contentType: 'document' },
+          topic: 'Local File Study',
+          contentType: 'text/plain',
+          difficulty: 'medium',
+          questionCount: 0,
+          confidence: 1.0,
+          timestamp: Date.now(),
+        }
+      };
+      setActiveContext(newContext);
+      setUploadStatus('Document synced successfully!');
+      setTimeout(() => setUploadStatus(''), 2500);
+    }, 1500);
+  };
+
+  const renderPerformanceMetrics = () => {
+    if (!import.meta.env.DEV || !performanceMetrics) return null;
     const { firstOpenTime, ttft, totalDuration } = performanceMetrics;
     if (!firstOpenTime && !ttft && !totalDuration) return null;
 
@@ -63,34 +163,66 @@ export const BottomBar: React.FC = () => {
     );
   };
 
-  const [isFocused, setIsFocused] = useState(false);
-
   return (
-    <div
-      style={{
-        padding: '16px 20px 24px 20px',
-        backgroundColor: 'var(--bg-primary)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '8px',
-        alignItems: 'center',
-        width: '100%',
-      }}
-    >
-      <div 
-        style={{ 
-          display: 'flex', 
-          flexDirection: 'column',
-          width: '100%', 
+    <div style={{
+      padding: '16px 20px 24px 20px',
+      backgroundColor: 'transparent',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '8px',
+      alignItems: 'center',
+      width: '100%',
+    }}>
+      {/* Hidden file input uploader element */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept=".pdf,.txt,.md,.json"
+        style={{ display: 'none' }}
+      />
+
+      {/* Auto-detected banners or status notifications */}
+      {(detectedUrl || uploadStatus) && (
+        <div style={{
+          width: '100%',
           maxWidth: isExpanded ? '800px' : '100%',
-          backgroundColor: 'var(--bg-surface)',
-          border: isFocused ? '1px solid var(--brand-primary)' : '1px solid var(--border-color)',
-          borderRadius: '20px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          backgroundColor: 'rgba(99, 102, 241, 0.04)',
+          border: '1px solid rgba(99, 102, 241, 0.15)',
+          borderRadius: '8px',
           padding: '8px 12px',
-          boxShadow: isFocused ? 'var(--shadow-aura)' : 'var(--shadow-sm)',
-          transition: 'all var(--motion-fast) var(--easing-default)',
-        }}
-      >
+          fontSize: '0.7rem',
+          color: 'var(--brand-primary)',
+          fontWeight: 700,
+          animation: 'fadeIn 200ms ease',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {detectedUrl ? <Link2 size={12} /> : <FileText size={12} />}
+            <span>
+              {uploadStatus || `Pasted URL Detected: ${detectedUrl}. Press Enter to auto-sync!`}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Main input card box */}
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column',
+        width: '100%', 
+        maxWidth: isExpanded ? '800px' : '100%',
+        backgroundColor: 'var(--bg-surface)',
+        border: isFocused ? '1px solid var(--brand-primary)' : '1px solid var(--border-color)',
+        borderRadius: '20px',
+        padding: '8px 12px',
+        boxShadow: isFocused ? 'var(--shadow-aura)' : 'var(--shadow-sm)',
+        transition: 'all var(--motion-fast) var(--easing-default)',
+        position: 'relative',
+      }}>
+        {/* Text Area Input */}
         <textarea
           rows={1}
           placeholder="Ask Orvixa to explain, hint, or teach..."
@@ -119,17 +251,30 @@ export const BottomBar: React.FC = () => {
           }}
         />
 
+        {/* Toolbar segment */}
         <div style={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'center', 
           marginTop: '6px',
           paddingTop: '6px',
-          borderTop: promptInput.trim() || isFocused ? '1px solid var(--border-color)' : '1px solid transparent',
-          transition: 'border-color var(--motion-fast) var(--easing-default)',
+          borderTop: '1px solid var(--border-color)',
         }}>
-          {/* Left Actions */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {/* Left Actions: scan, upload, voice, socratic mode */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', position: 'relative' }}>
+            
+            {/* 1. Document / File Uploader */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              title="Upload PDF or document context..."
+              style={{ padding: '6px', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}
+            >
+              <Paperclip size={14} style={{ color: 'var(--text-muted)' }} />
+            </Button>
+
+            {/* 2. Screen Scraper */}
             <Button
               variant="ghost"
               size="sm"
@@ -148,21 +293,122 @@ export const BottomBar: React.FC = () => {
               <Scan size={14} style={{ color: isContextReady ? 'var(--brand-primary)' : 'var(--text-muted)' }} />
             </Button>
 
+            {/* 3. Voice overlay headphones */}
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setIsVoiceModeActive(true)}
-              title="Start Voice Session"
+              onClick={() => {
+                if (isSpeechSupported) {
+                  setIsVoiceModeActive(true);
+                }
+              }}
+              title={isSpeechSupported ? "Start Voice Session" : "Voice mode is supported in Chrome. Edge WebView2 does not support speech recognition."}
               style={{ 
                 padding: '6px',
                 borderRadius: '50%',
                 width: '32px',
                 height: '32px',
-                cursor: 'pointer' 
+                opacity: isSpeechSupported ? 1 : 0.4,
+                cursor: isSpeechSupported ? 'pointer' : 'not-allowed'
               }}
             >
-              <Headphones size={14} style={{ color: 'var(--text-muted)' }} />
+              <Headphones size={14} style={{ color: isSpeechSupported ? 'var(--text-muted)' : 'var(--text-muted)' }} />
             </Button>
+
+            {/* 4. Socratic Mode Selector Dropdown */}
+            <div style={{ position: 'relative' }}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowModeMenu(!showModeMenu)}
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  backgroundColor: 'rgba(255,255,255,0.02)',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--text-secondary)',
+                  fontSize: '0.65rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                <Sliders size={10} style={{ color: 'var(--brand-primary)' }} />
+                <span>
+                  {socraticMode === 'hint' ? 'Socratic Hint' : socraticMode === 'challenge' ? 'Challenge' : 'Full Explainer'}
+                </span>
+              </Button>
+
+              {showModeMenu && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: '36px',
+                  left: 0,
+                  backgroundColor: 'var(--bg-surface-elevated)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '4px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '2px',
+                  zIndex: 100,
+                  width: '130px',
+                  boxShadow: 'var(--shadow-lg)',
+                  animation: 'slideUp var(--motion-fast) ease',
+                }}>
+                  <button
+                    onClick={() => { setSocraticMode('hint'); setShowModeMenu(false); }}
+                    style={{
+                      padding: '6px 10px',
+                      border: 'none',
+                      background: 'none',
+                      color: socraticMode === 'hint' ? 'var(--brand-primary)' : 'var(--text-secondary)',
+                      fontSize: '0.68rem',
+                      fontWeight: 600,
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      borderRadius: 'var(--radius-sm)',
+                    }}
+                  >
+                    🎯 Socratic Hint
+                  </button>
+                  <button
+                    onClick={() => { setSocraticMode('explain'); setShowModeMenu(false); }}
+                    style={{
+                      padding: '6px 10px',
+                      border: 'none',
+                      background: 'none',
+                      color: socraticMode === 'explain' ? 'var(--brand-primary)' : 'var(--text-secondary)',
+                      fontSize: '0.68rem',
+                      fontWeight: 600,
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      borderRadius: 'var(--radius-sm)',
+                    }}
+                  >
+                    📖 Full Explainer
+                  </button>
+                  <button
+                    onClick={() => { setSocraticMode('challenge'); setShowModeMenu(false); }}
+                    style={{
+                      padding: '6px 10px',
+                      border: 'none',
+                      background: 'none',
+                      color: socraticMode === 'challenge' ? 'var(--brand-primary)' : 'var(--text-secondary)',
+                      fontSize: '0.68rem',
+                      fontWeight: 600,
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      borderRadius: 'var(--radius-sm)',
+                    }}
+                  >
+                    🤔 Challenge Mode
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Right Send Button */}
