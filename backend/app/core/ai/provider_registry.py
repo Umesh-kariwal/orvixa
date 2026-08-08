@@ -24,7 +24,7 @@ class AIProviderRegistry:
         
         # Set a low failure threshold (1 failure) for Gemini if Nvidia key is present
         from app.core.config import settings
-        nvidia_key = getattr(settings, "NVIDIA_API_KEY", None) or os.getenv("NVIDIA_API_KEY")
+        nvidia_key = getattr(settings, "NVIDIA_API_KEY", None) or os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_API_KEYS")
         threshold = 1 if (name == "google_gemini" and nvidia_key) else 5
         
         cls._circuit_breakers[name] = CircuitBreaker(failure_threshold=threshold)
@@ -36,7 +36,7 @@ class AIProviderRegistry:
         # Preemptive override: if Google Gemini is requested but an Nvidia API key is configured
         # and Gemini key is missing/empty, automatically redirect to Nvidia provider.
         from app.core.config import settings
-        nvidia_key = getattr(settings, "NVIDIA_API_KEY", None) or os.getenv("NVIDIA_API_KEY")
+        nvidia_key = getattr(settings, "NVIDIA_API_KEY", None) or os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_API_KEYS")
         gemini_key = settings.GEMINI_API_KEY
         
         if target_name == "google_gemini" and nvidia_key and (not gemini_key or not gemini_key.strip()):
