@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useSidePanel } from '@/hooks/useSidePanel';
 import { Button } from '@/components/ui/Button';
 import { 
@@ -8,7 +8,7 @@ import {
   Paperclip, 
   Link2, 
   Sliders,
-  FileText
+  AudioLines
 } from 'lucide-react';
 
 export const BottomBar: React.FC = () => {
@@ -17,7 +17,6 @@ export const BottomBar: React.FC = () => {
     performanceMetrics, 
     activeContext, 
     setActiveContext,
-    isExpanded, 
     setIsVoiceModeActive 
   } = useSidePanel();
 
@@ -29,21 +28,97 @@ export const BottomBar: React.FC = () => {
   const [uploadStatus, setUploadStatus] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Dictation / Speech-to-Text states
+  const [isDictating, setIsDictating] = useState<boolean>(false);
+  const recognitionRef = useRef<any>(null);
+
   // Check if voice Speech Recognition is supported in the active environment
   const isSpeechSupported = typeof window !== 'undefined' && 
     (!!(window as any).SpeechRecognition || !!(window as any).webkitSpeechRecognition);
 
   const isContextReady = !!(activeContext && activeContext.pageContext && activeContext.observed_title !== 'orvixa' && !activeContext.observed_url?.startsWith('chrome-extension://'));
 
-  // Autodetect URL links pasted in input box
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   const detectedUrlMatch = promptInput.match(urlRegex);
   const detectedUrl = detectedUrlMatch ? detectedUrlMatch[0] : null;
 
+  // Cleanup dictation on unmount
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, []);
+
+  const startDictation = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setShowVoiceAlert(true);
+      return;
+    }
+
+    try {
+      const rec = new SpeechRecognition();
+      rec.continuous = true;
+      rec.interimResults = true;
+      rec.lang = 'en-US';
+
+      rec.onresult = (event: any) => {
+        let interimTrans = '';
+        let finalTrans = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTrans += event.results[i][0].transcript;
+          } else {
+            interimTrans += event.results[i][0].transcript;
+          }
+        }
+        if (finalTrans) {
+          setPromptInput((prev) => prev + (prev.endsWith(' ') || prev === '' ? '' : ' ') + finalTrans);
+        }
+      };
+
+      rec.onerror = (e: any) => {
+        console.error('Speech recognition error:', e);
+        setIsDictating(false);
+      };
+
+      rec.onend = () => {
+        setIsDictating(false);
+      };
+
+      recognitionRef.current = rec;
+      rec.start();
+      setIsDictating(true);
+    } catch (err) {
+      console.error(err);
+      setIsDictating(false);
+    }
+  };
+
+  const stopDictation = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    setIsDictating(false);
+  };
+
+  const toggleDictation = () => {
+    if (isDictating) {
+      stopDictation();
+    } else {
+      startDictation();
+    }
+  };
+
   const handleSend = () => {
     if (!promptInput.trim()) return;
 
-    // If it's a URL, let's auto-sync the context first!
+    if (isDictating) {
+      stopDictation();
+    }
+
     if (detectedUrl) {
       setUploadStatus('Syncing URL context...');
       const newContext = {
@@ -57,16 +132,16 @@ export const BottomBar: React.FC = () => {
         pageContext: {
           url: detectedUrl,
           origin: 'https://orvixa-app.com',
-          hostname: 'orvixa-app.com',
-          pageTitle: detectedUrl.replace('https://', '').split('/')[0],
+          hostname: detectedUrl.replace('https://', '').replace('http://', '').split('/')[0],
+          pageTitle: detectedUrl.replace('https://', '').replace('http://', '').split('/')[0],
           pageType: 'webpage',
           platform: 'generic_web',
           language: 'en',
           selectedText: '',
-          visibleText: `Simulated document content parsed from URL: ${detectedUrl}. Ready for learning.`,
+          visibleText: `Simulated document content parsed from ${detectedUrl}. Ready for Socratic learning.`,
           headings: [],
           metadata: { contentType: 'webpage' },
-          topic: 'Auto-sync Web Study',
+          topic: 'Linked Article Study',
           contentType: 'text/html',
           difficulty: 'medium',
           questionCount: 0,
@@ -74,158 +149,148 @@ export const BottomBar: React.FC = () => {
           timestamp: Date.now(),
         }
       };
-      setActiveContext(newContext);
-      setUploadStatus('Syncing completed!');
-      setTimeout(() => setUploadStatus(''), 2000);
+      setTimeout(() => {
+        setActiveContext(newContext);
+        setUploadStatus('');
+      }, 1000);
     }
 
-    // Map socraticMode to action parameters
     executeAction({
       action_id: socraticMode === 'hint' ? 'hint' : socraticMode === 'challenge' ? 'interview' : 'custom_learning_query',
-      label: socraticMode === 'hint' ? 'Socratic Hint' : socraticMode === 'challenge' ? 'Challenge Question' : 'Explainer',
+      label: socraticMode === 'hint' ? 'Socratic Clue' : socraticMode === 'challenge' ? 'Challenge Question' : 'Explainer Note',
       description: promptInput,
-      icon: 'sparkles',
+      icon: 'sparkles'
     });
-    
+
     setPromptInput('');
   };
 
   const handleScanScreen = () => {
-    if (!isContextReady) return;
     executeAction({
       action_id: 'explain',
-      label: 'Screen Analysis',
+      label: 'Scan Screen',
       description: 'Analyze active learning screen content',
-      icon: 'sparkles',
+      icon: 'sparkles'
     });
   };
 
-  // Mock document/file upload uploader handler
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setUploadStatus(`Uploading ${file.name}...`);
+    setUploadStatus(`Parsing ${file.name}...`);
     setTimeout(() => {
-      const newContext = {
+      const mockContext = {
         confidence_tier: 'HIGH' as const,
         confidence_score: 1.0,
         primary_intent: 'study',
         recommended_actions: [],
         side_panel_state: 'OPEN',
         redacted: false,
-        sanitized_summary: `Uploaded File: ${file.name}`,
+        sanitized_summary: `PDF Vault: ${file.name}`,
         pageContext: {
-          url: `file://${file.name}`,
-          origin: 'local://file',
-          hostname: 'localhost',
+          url: `file:///${file.name}`,
+          origin: 'local_filesystem',
+          hostname: 'local_storage',
           pageTitle: file.name,
           pageType: 'document',
-          platform: 'local_file',
+          platform: 'vault',
           language: 'en',
           selectedText: '',
-          visibleText: `Loaded local file content from ${file.name}. Prepared for Socratic query tutoring.`,
+          visibleText: `Synchronized vault document text parsed from ${file.name}. Fully ready for deep Socratic review.`,
           headings: [],
-          metadata: { contentType: 'document' },
-          topic: 'Local File Study',
-          contentType: 'text/plain',
+          metadata: { size: file.size, filename: file.name },
+          topic: file.name.split('.')[0],
+          contentType: file.type || 'application/pdf',
           difficulty: 'medium',
           questionCount: 0,
           confidence: 1.0,
           timestamp: Date.now(),
         }
       };
-      setActiveContext(newContext);
-      setUploadStatus('Document synced successfully!');
+      setActiveContext(mockContext);
+      setUploadStatus(`Success: ${file.name} synchronized.`);
       setTimeout(() => setUploadStatus(''), 2500);
-    }, 1500);
+    }, 1200);
   };
 
   const renderPerformanceMetrics = () => {
-    if (!import.meta.env.DEV || !performanceMetrics) return null;
-    const { firstOpenTime, ttft, totalDuration } = performanceMetrics;
-    if (!firstOpenTime && !ttft && !totalDuration) return null;
-
+    if (!performanceMetrics || !performanceMetrics.totalDuration) return null;
     return (
       <div style={{
         display: 'flex',
-        justifyContent: 'space-around',
-        fontSize: '10px',
-        color: 'var(--text-secondary)',
-        paddingTop: '8px',
-        borderTop: '1px solid rgba(255, 255, 255, 0.05)',
-        width: '100%',
-        maxWidth: isExpanded ? '850px' : '100%',
+        justifyContent: 'flex-end',
+        gap: '12px',
+        fontSize: '0.62rem',
+        color: 'var(--text-muted)',
+        paddingTop: '6px',
+        opacity: 0.8,
       }}>
-        {firstOpenTime && <span>Open: {firstOpenTime}ms</span>}
-        {ttft && <span>TTFT: {ttft}ms</span>}
-        {totalDuration && <span>Stream: {totalDuration}ms</span>}
+        {performanceMetrics.ttft && (
+          <span>TTFT: {performanceMetrics.ttft}ms</span>
+        )}
+        <span>Duration: {performanceMetrics.totalDuration}ms</span>
       </div>
     );
   };
 
   return (
-    <div style={{
-      padding: '16px 20px 24px 20px',
-      backgroundColor: 'transparent',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '8px',
-      alignItems: 'center',
-      width: '100%',
-    }}>
-      {/* Hidden file input uploader element */}
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileChange}
-        accept=".pdf,.txt,.md,.json"
-        style={{ display: 'none' }}
-      />
-
-      {/* Auto-detected banners or status notifications */}
-      {(detectedUrl || uploadStatus) && (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', position: 'relative' }}>
+      
+      {uploadStatus && (
         <div style={{
-          width: '100%',
-          maxWidth: isExpanded ? '800px' : '100%',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          backgroundColor: 'rgba(99, 102, 241, 0.04)',
-          border: '1px solid rgba(99, 102, 241, 0.15)',
-          borderRadius: '8px',
-          padding: '8px 12px',
-          fontSize: '0.7rem',
+          fontSize: '0.68rem',
           color: 'var(--brand-primary)',
-          fontWeight: 700,
-          animation: 'fadeIn 200ms ease',
+          backgroundColor: 'rgba(99, 102, 241, 0.05)',
+          padding: '6px 12px',
+          borderRadius: 'var(--radius-sm)',
+          border: '1px solid rgba(99, 102, 241, 0.1)',
+          animation: 'fadeIn var(--motion-fast) ease',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            {detectedUrl ? <Link2 size={12} /> : <FileText size={12} />}
-            <span>
-              {uploadStatus || `Pasted URL Detected: ${detectedUrl}. Press Enter to auto-sync!`}
-            </span>
-          </div>
+          ⚡ {uploadStatus}
         </div>
       )}
 
-      {/* Main input card box */}
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: 'column',
-        width: '100%', 
-        maxWidth: isExpanded ? '800px' : '100%',
-        backgroundColor: 'var(--bg-surface)',
+      {/* Hidden uploader input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileUpload}
+        accept=".pdf,.txt,.docx,.png,.jpg"
+        style={{ display: 'none' }}
+      />
+
+      <div style={{
+        borderRadius: '16px',
+        backgroundColor: 'rgba(10, 10, 15, 0.7)',
+        backdropFilter: 'blur(16px)',
         border: isFocused ? '1px solid var(--brand-primary)' : '1px solid var(--border-color)',
-        borderRadius: '20px',
-        padding: '8px 12px',
-        boxShadow: isFocused ? 'var(--shadow-aura)' : 'var(--shadow-sm)',
-        transition: 'all var(--motion-fast) var(--easing-default)',
-        position: 'relative',
+        padding: '10px 14px',
+        boxShadow: isFocused ? '0 0 15px rgba(99, 102, 241, 0.1)' : 'var(--shadow-md)',
+        transition: 'all var(--motion-fast) ease',
       }}>
-        {/* Text Area Input */}
+        {/* URL synchronization tip pill */}
+        {detectedUrl && (
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            backgroundColor: 'rgba(16, 185, 129, 0.08)',
+            border: '1px solid rgba(16, 185, 129, 0.2)',
+            borderRadius: '20px',
+            padding: '4px 10px',
+            fontSize: '0.62rem',
+            color: 'var(--emerald-primary)',
+            fontWeight: 800,
+            marginBottom: '8px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.04em',
+          }}>
+            <Link2 size={10} /> Auto-Sync Webpage Detected
+          </div>
+        )}
+
         <textarea
-          rows={1}
           placeholder="Ask Orvixa to explain, hint, or teach..."
           value={promptInput}
           onChange={(e) => setPromptInput(e.target.value)}
@@ -261,7 +326,7 @@ export const BottomBar: React.FC = () => {
           paddingTop: '6px',
           borderTop: '1px solid var(--border-color)',
         }}>
-          {/* Left Actions: scan, upload, voice, socratic mode */}
+          {/* Left Actions: scan, upload, voice dictation, socratic mode */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', position: 'relative' }}>
             
             {/* 1. Document / File Uploader */}
@@ -294,18 +359,12 @@ export const BottomBar: React.FC = () => {
               <Scan size={14} style={{ color: isContextReady ? 'var(--brand-primary)' : 'var(--text-muted)' }} />
             </Button>
 
-            {/* 3. Voice Assistant Microphone Button */}
+            {/* 3. Voice Input (Speech-to-Text Dictation) */}
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => {
-                if (isSpeechSupported) {
-                  setIsVoiceModeActive(true);
-                } else {
-                  setShowVoiceAlert(true);
-                }
-              }}
-              title={isSpeechSupported ? "Start Voice Session" : "Voice assistant notice (click to read)"}
+              onClick={toggleDictation}
+              title={isDictating ? "Listening... click to stop" : "Voice Dictation (Speech to Text)"}
               style={{ 
                 padding: '6px',
                 borderRadius: '50%',
@@ -316,20 +375,24 @@ export const BottomBar: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: 'rgba(99, 102, 241, 0.05)',
-                border: '1px solid rgba(99, 102, 241, 0.15)',
+                backgroundColor: isDictating ? 'rgba(239, 68, 68, 0.15)' : 'rgba(99, 102, 241, 0.05)',
+                border: isDictating ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(99, 102, 241, 0.15)',
                 transition: 'all var(--motion-fast) ease',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.15)';
-                e.currentTarget.style.transform = 'scale(1.08)';
+                if (!isDictating) {
+                  e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.15)';
+                  e.currentTarget.style.transform = 'scale(1.08)';
+                }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.05)';
-                e.currentTarget.style.transform = 'none';
+                if (!isDictating) {
+                  e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.05)';
+                  e.currentTarget.style.transform = 'none';
+                }
               }}
             >
-              <Mic size={14} style={{ color: 'var(--brand-primary)' }} />
+              <Mic size={14} style={{ color: isDictating ? '#ef4444' : 'var(--brand-primary)' }} />
             </Button>
 
             {/* 4. Socratic Mode Selector Dropdown */}
@@ -439,24 +502,64 @@ export const BottomBar: React.FC = () => {
             </div>
           </div>
 
-          {/* Right Send Button */}
-          <Button 
-            variant="primary" 
-            size="sm" 
-            onClick={handleSend} 
-            disabled={!promptInput.trim()}
-            style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '50%',
-              padding: 0,
-              backgroundColor: promptInput.trim() ? 'var(--brand-primary)' : 'var(--border-color)',
-              color: promptInput.trim() ? '#ffffff' : 'var(--text-muted)',
-              transition: 'all var(--motion-fast) var(--easing-default)',
-            }}
-          >
-            <CornerDownLeft size={13} />
-          </Button>
+          {/* Right Actions: Voice Assistant & Send button */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            
+            {/* 3. Voice Assistant (Real-time conversation call) */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (isSpeechSupported) {
+                  setIsVoiceModeActive(true);
+                } else {
+                  setShowVoiceAlert(true);
+                }
+              }}
+              title="Voice Assistant (Real-time voice conversation)"
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                padding: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(99, 102, 241, 0.05)',
+                border: '1px solid rgba(99, 102, 241, 0.15)',
+                transition: 'all var(--motion-fast) ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.15)';
+                e.currentTarget.style.transform = 'scale(1.08)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.05)';
+                e.currentTarget.style.transform = 'none';
+              }}
+            >
+              <AudioLines size={14} style={{ color: 'var(--brand-primary)' }} />
+            </Button>
+
+            {/* Send Arrow Button */}
+            <Button 
+              variant="primary" 
+              size="sm" 
+              onClick={handleSend} 
+              disabled={!promptInput.trim()}
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                padding: 0,
+                backgroundColor: promptInput.trim() ? 'var(--brand-primary)' : 'var(--border-color)',
+                color: promptInput.trim() ? '#ffffff' : 'var(--text-muted)',
+                transition: 'all var(--motion-fast) var(--easing-default)',
+              }}
+            >
+              <CornerDownLeft size={13} />
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -469,24 +572,27 @@ export const BottomBar: React.FC = () => {
           transform: 'translateX(-50%)',
           width: '90%',
           maxWidth: '380px',
-          backgroundColor: 'var(--bg-surface-elevated)',
-          border: '1px solid var(--border-color)',
+          backgroundColor: '#0a0a10',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
           borderRadius: 'var(--radius-lg)',
           padding: '16px',
-          boxShadow: 'var(--shadow-xl)',
+          boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
           zIndex: 1000,
           animation: 'slideUp var(--motion-fast) ease',
           display: 'flex',
           flexDirection: 'column',
           gap: '12px',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--amber-primary)' }}>
             <Sliders size={14} style={{ color: 'var(--amber-primary)' }} />
-            <span style={{ fontWeight: 800, fontSize: '0.78rem' }}>Voice Assistant Notice</span>
+            <span style={{ fontWeight: 800, fontSize: '0.78rem' }}>Voice Feature Notice</span>
           </div>
           <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: '1.45' }}>
-            Voice dictation relies on the Google Chrome Web Speech API. Native WebView2 app containers on Windows do not support it. 
-            To use voice commands, open Orvixa in <strong>Google Chrome</strong>!
+            Voice transcription and conversational features rely on the Chrome Web Speech API. 
+            Native WebView2 desktop app wrappers do not support microphone access. 
+            To use voice features, open Orvixa in <strong>Google Chrome</strong>!
           </p>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
             <Button size="sm" variant="ghost" onClick={() => setShowVoiceAlert(false)} style={{ fontSize: '0.7rem' }}>Dismiss</Button>
