@@ -327,7 +327,7 @@ export const WorkspaceLayout: React.FC = () => {
             Get system-wide focus, offline persistence, and auto-updates.
           </p>
           <a
-            href="https://github.com/Umesh-kariwal/orvixa/releases/download/app-v0.1.0/Orvixa_0.1.0_x64-setup.exe"
+            href="https://github.com/Umesh-kariwal/orvixa/releases/download/app-v0.8.0/Orvixa_0.8.0_x64-setup.exe"
             style={{
               width: '100%',
               padding: '8px',
