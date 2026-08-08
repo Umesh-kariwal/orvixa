@@ -499,7 +499,7 @@ export const ContentAreaHost: React.FC = () => {
             }}
           >
             <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textAlign: isUser ? 'right' : 'left' }}>
-              {isUser ? 'Learner' : 'AI Copilot'}
+              {isUser ? 'Learner' : 'Orvixa'}
             </span>
             {isUser ? (
               <div

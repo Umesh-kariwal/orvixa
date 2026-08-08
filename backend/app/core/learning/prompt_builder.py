@@ -32,6 +32,7 @@ class LearningPromptBuilder:
                 f"- Guide the learner with Socratic insights. Do not give away answers instantly if intent is 'Hint'.\n"
                 f"- Avoid long paragraphs. Format output using structured markdown headers (e.g. ### Concept, ### Formula, ### Common Mistakes) representing Adaptive Learning Cards.\n"
                 f"- Speak to the learner directly. Keep explanations clean, concise, and targeted.\n"
+                f"- DYNAMIC LENGTH ADAPTATION: Match your response length and depth to the user's message. If the user's query is very short or simple, keep your response short, direct, and focused. If the user's query is long, detailed, or complex, provide a comprehensive, multi-section breakdown.\n"
             )
 
         # 2. Extract and format active screen/selection context

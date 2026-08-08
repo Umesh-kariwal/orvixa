@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { RendererComponentProps } from '../core/types';
-import { Copy, Check } from 'lucide-react';
+import { Copy, Check, Info, AlertTriangle, Lightbulb, Star } from 'lucide-react';
 
 const getMermaidUrl = (spec: string): string => {
   try {
@@ -31,7 +31,7 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
     return parts.map((part, i) => {
       if (part.startsWith('**') && part.endsWith('**')) {
         return (
-          <strong key={i} style={{ color: 'var(--text-primary)', fontWeight: 700 }}>
+          <strong key={i} style={{ color: 'var(--text-primary)', fontWeight: 800 }}>
             {part.slice(2, -2)}
           </strong>
         );
@@ -41,12 +41,14 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
           <code
             key={i}
             style={{
-              backgroundColor: 'var(--amber-bg)',
-              color: 'var(--amber-primary)',
+              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              color: 'var(--brand-primary)',
               padding: '2px 6px',
-              borderRadius: '4px',
+              borderRadius: '6px',
+              border: '1px solid var(--border-color)',
               fontFamily: 'SFMono-Regular, Consolas, Monaco, monospace',
-              fontSize: '0.85em',
+              fontSize: '0.82em',
+              fontWeight: 600,
             }}
           >
             {part.slice(1, -1)}
@@ -61,7 +63,7 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
               key={i}
               style={{
                 margin: '16px 0',
-                borderRadius: '8px',
+                borderRadius: 'var(--radius-md)',
                 border: '1px solid var(--border-color)',
                 overflow: 'hidden',
                 backgroundColor: 'rgba(0, 0, 0, 0.1)',
@@ -86,13 +88,13 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
               {match[1] && (
                 <div
                   style={{
-                    fontSize: '0.75rem',
+                    fontSize: '0.72rem',
                     color: 'var(--text-secondary)',
                     textAlign: 'center',
                     padding: '8px 12px',
                     borderTop: '1px solid var(--border-color)',
                     width: '100%',
-                    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.01)',
                   }}
                 >
                   {match[1]}
@@ -114,8 +116,11 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
               style={{
                 color: 'var(--brand-primary)',
                 textDecoration: 'underline',
-                fontWeight: 500,
+                fontWeight: 600,
+                transition: 'color var(--motion-fast) ease',
               }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
+              onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--brand-primary)')}
             >
               {match[1]}
             </a>
@@ -153,14 +158,15 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
         <ListTag
           key={`list-${key}`}
           style={{
-            margin: '0 0 16px 20px',
+            margin: '0 0 18px 24px',
             padding: 0,
             display: 'flex',
             flexDirection: 'column',
-            gap: '6px',
+            gap: '8px',
             color: 'var(--text-secondary)',
-            fontSize: '0.85rem',
-            lineHeight: 1.5,
+            fontSize: '0.88rem',
+            lineHeight: '1.65',
+            animation: 'fadeIn 0.25s ease-out forwards',
           }}
         >
           {currentListItems}
@@ -190,15 +196,17 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
             <div
               key={blockId}
               style={{
-                margin: '16px 0',
-                borderRadius: 'var(--radius-md)',
+                margin: '18px 0',
+                borderRadius: 'var(--radius-lg)',
                 border: '1px solid var(--border-color)',
                 overflow: 'hidden',
-                backgroundColor: 'rgba(255, 255, 255, 0.95)', // White background to show the flowchart clearly!
+                backgroundColor: 'rgba(255, 255, 255, 0.98)', 
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                padding: '16px',
+                padding: '20px',
+                boxShadow: 'var(--shadow-md)',
+                animation: 'fadeIn 0.3s ease-out forwards',
               }}
             >
               <img
@@ -207,7 +215,7 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
                 style={{ maxWidth: '100%', height: 'auto', display: 'block' }}
                 loading="lazy"
               />
-              <div style={{ fontSize: '0.7rem', color: 'rgba(0,0,0,0.5)', marginTop: '8px', fontFamily: 'var(--font-sans)' }}>
+              <div style={{ fontSize: '0.7rem', color: 'rgba(0,0,0,0.4)', marginTop: '10px', fontFamily: 'var(--font-sans)', fontWeight: 600 }}>
                 Visual Flowchart Diagram
               </div>
             </div>
@@ -218,11 +226,13 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
               key={blockId}
               style={{
                 position: 'relative',
-                margin: '12px 0 16px 0',
-                borderRadius: 'var(--radius-md)',
+                margin: '14px 0 18px 0',
+                borderRadius: 'var(--radius-lg)',
                 border: '1px solid var(--border-color)',
                 overflow: 'hidden',
-                backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                backgroundColor: 'rgba(10, 15, 30, 0.95)',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
+                animation: 'fadeIn 0.3s ease-out forwards',
               }}
             >
               {/* Header toolbar */}
@@ -231,12 +241,12 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  padding: '6px 12px',
-                  borderBottom: '1px solid rgba(255,255,255,0.08)',
-                  backgroundColor: 'rgba(30, 41, 59, 0.4)',
+                  padding: '8px 16px',
+                  borderBottom: '1px solid rgba(255,255,255,0.06)',
+                  backgroundColor: 'rgba(20, 25, 45, 0.5)',
                 }}
               >
-                <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace' }}>
+                <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', fontFamily: 'monospace', fontWeight: 700 }}>
                   {codeBlockLang || 'code'}
                 </span>
                 <button
@@ -245,30 +255,34 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
-                    color: isCopied ? '#34d399' : 'rgba(255,255,255,0.5)',
+                    color: isCopied ? '#10b981' : 'rgba(255,255,255,0.5)',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '0.65rem',
-                    padding: '2px 6px',
-                    borderRadius: '4px',
+                    gap: '6px',
+                    fontSize: '0.68rem',
+                    fontWeight: 700,
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    transition: 'all var(--motion-fast) ease',
                   }}
+                  onMouseEnter={(e) => { if(!isCopied) e.currentTarget.style.color = '#ffffff'; }}
+                  onMouseLeave={(e) => { if(!isCopied) e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; }}
                   title="Copy to clipboard"
                 >
                   {isCopied ? <Check size={12} /> : <Copy size={12} />}
-                  {isCopied ? 'Copied' : 'Copy'}
+                  {isCopied ? 'Copied!' : 'Copy'}
                 </button>
               </div>
               {/* Code Content */}
               <pre
                 style={{
                   margin: 0,
-                  padding: '12px',
+                  padding: '14px',
                   overflowX: 'auto',
-                  fontSize: '0.8rem',
+                  fontSize: '0.82rem',
                   fontFamily: 'SFMono-Regular, Consolas, Monaco, monospace',
                   color: '#e2e8f0',
-                  lineHeight: 1.5,
+                  lineHeight: 1.6,
                 }}
               >
                 <code>{codeText}</code>
@@ -297,25 +311,29 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
       flushList(idx);
       let calloutText = line.slice(1).trim();
       let borderLeftColor = 'var(--brand-primary)';
-      let backgroundColor = 'rgba(59, 130, 246, 0.05)';
+      let backgroundColor = 'rgba(99, 102, 241, 0.04)';
       let label = 'Note';
+      let icon = <Info size={14} style={{ color: 'var(--brand-primary)' }} />;
 
       if (calloutText.startsWith('[!NOTE]')) {
         calloutText = calloutText.slice(7).trim();
       } else if (calloutText.startsWith('[!WARNING]')) {
         borderLeftColor = 'var(--rose-primary)';
-        backgroundColor = 'rgba(239, 68, 68, 0.05)';
+        backgroundColor = 'rgba(239, 68, 68, 0.03)';
         label = 'Warning';
+        icon = <AlertTriangle size={14} style={{ color: 'var(--rose-primary)' }} />;
         calloutText = calloutText.slice(10).trim();
       } else if (calloutText.startsWith('[!TIP]')) {
         borderLeftColor = 'var(--emerald-primary)';
-        backgroundColor = 'rgba(16, 185, 129, 0.05)';
+        backgroundColor = 'rgba(16, 185, 129, 0.03)';
         label = 'Tip';
+        icon = <Lightbulb size={14} style={{ color: 'var(--emerald-primary)' }} />;
         calloutText = calloutText.slice(6).trim();
       } else if (calloutText.startsWith('[!IMPORTANT]')) {
         borderLeftColor = 'var(--amber-primary)';
-        backgroundColor = 'rgba(245, 158, 11, 0.05)';
+        backgroundColor = 'rgba(245, 158, 11, 0.03)';
         label = 'Important';
+        icon = <Star size={14} style={{ color: 'var(--amber-primary)' }} />;
         calloutText = calloutText.slice(12).trim();
       }
 
@@ -323,18 +341,33 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
         <div
           key={`callout-${idx}`}
           style={{
-            margin: '12px 0 16px 0',
-            padding: '12px 16px',
-            borderRadius: '0 var(--radius-md) var(--radius-md) 0',
+            margin: '14px 0 18px 0',
+            padding: '16px 20px',
+            borderRadius: 'var(--radius-md)',
             borderLeft: `4px solid ${borderLeftColor}`,
+            borderTop: '1px solid var(--border-color)',
+            borderRight: '1px solid var(--border-color)',
+            borderBottom: '1px solid var(--border-color)',
             backgroundColor: backgroundColor,
             fontFamily: 'var(--font-sans)',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+            animation: 'fadeIn 0.25s ease-out forwards',
+            transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.1)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'none';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)';
           }}
         >
-          <div style={{ fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', color: borderLeftColor, marginBottom: '4px' }}>
-            {label}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '0.75rem', textTransform: 'uppercase', color: borderLeftColor, marginBottom: '6px' }}>
+            {icon}
+            <span>{label}</span>
           </div>
-          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+          <div style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.65 }}>
             {parseInline(calloutText)}
           </div>
         </div>
@@ -350,11 +383,12 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
         <h4
           key={`h3-${idx}`}
           style={{
-            margin: '20px 0 8px 0',
-            fontSize: '0.95rem',
-            fontWeight: 700,
-            color: 'var(--text-primary)',
+            margin: '22px 0 10px 0',
+            fontSize: '1.08rem',
+            fontWeight: 800,
+            color: 'var(--brand-primary)',
             letterSpacing: '-0.01em',
+            animation: 'fadeIn 0.25s ease-out forwards',
           }}
         >
           {parseInline(h3Match[1].trim())}
@@ -369,13 +403,14 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
         <h3
           key={`h2-${idx}`}
           style={{
-            margin: '24px 0 10px 0',
-            fontSize: '1.05rem',
-            fontWeight: 700,
-            color: 'var(--text-primary)',
+            margin: '28px 0 12px 0',
+            fontSize: '1.25rem',
+            fontWeight: 800,
+            color: '#ffffff',
             letterSpacing: '-0.02em',
             borderBottom: '1px solid var(--border-color)',
-            paddingBottom: '4px',
+            paddingBottom: '8px',
+            animation: 'fadeIn 0.25s ease-out forwards',
           }}
         >
           {parseInline(h2Match[1].trim())}
@@ -390,11 +425,14 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
         <h2
           key={`h1-${idx}`}
           style={{
-            margin: '28px 0 12px 0',
-            fontSize: '1.2rem',
-            fontWeight: 800,
-            color: 'var(--text-primary)',
+            margin: '32px 0 16px 0',
+            fontSize: '1.45rem',
+            fontWeight: 900,
+            color: '#ffffff',
             letterSpacing: '-0.03em',
+            borderLeft: '4px solid var(--brand-primary)',
+            paddingLeft: '12px',
+            animation: 'fadeIn 0.25s ease-out forwards',
           }}
         >
           {parseInline(h1Match[1].trim())}
@@ -410,7 +448,7 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
         listType = 'ul';
       }
       currentListItems.push(
-        <li key={`li-${idx}`} style={{ marginBottom: '4px' }}>
+        <li key={`li-${idx}`} style={{ marginBottom: '6px', listStyleType: 'square' }}>
           {parseInline(line.slice(2))}
         </li>
       );
@@ -425,7 +463,7 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
         listType = 'ol';
       }
       currentListItems.push(
-        <li key={`li-${idx}`} style={{ marginBottom: '4px' }}>
+        <li key={`li-${idx}`} style={{ marginBottom: '6px' }}>
           {parseInline(numMatch[2])}
         </li>
       );
@@ -444,12 +482,13 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
       <p
         key={`p-${idx}`}
         style={{
-          margin: '0 0 12px 0',
-          fontSize: '0.85rem',
-          lineHeight: 1.6,
+          margin: '0 0 14px 0',
+          fontSize: '0.88rem',
+          lineHeight: 1.65,
           color: 'var(--text-secondary)',
           wordBreak: 'break-word',
           overflowWrap: 'break-word',
+          animation: 'fadeIn 0.25s ease-out forwards',
         }}
       >
         {parseInline(rawLine)}
