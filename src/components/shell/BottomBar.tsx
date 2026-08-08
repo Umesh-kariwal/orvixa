@@ -349,63 +349,74 @@ export const BottomBar: React.FC = () => {
                   position: 'absolute',
                   bottom: '36px',
                   left: 0,
-                  backgroundColor: 'var(--bg-surface-elevated)',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '4px',
+                  backgroundColor: '#0a0a10',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  borderRadius: '8px',
+                  padding: '6px',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '2px',
+                  gap: '4px',
                   zIndex: 100,
-                  width: '130px',
-                  boxShadow: 'var(--shadow-lg)',
+                  width: '140px',
+                  boxShadow: '0 8px 25px rgba(0,0,0,0.5)',
                   animation: 'slideUp var(--motion-fast) ease',
+                  backdropFilter: 'blur(10px)',
+                  WebkitBackdropFilter: 'blur(10px)',
                 }}>
                   <button
                     onClick={() => { setSocraticMode('hint'); setShowModeMenu(false); }}
                     style={{
-                      padding: '6px 10px',
+                      padding: '8px 10px',
                       border: 'none',
                       background: 'none',
                       color: socraticMode === 'hint' ? 'var(--brand-primary)' : 'var(--text-secondary)',
-                      fontSize: '0.68rem',
-                      fontWeight: 600,
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
                       textAlign: 'left',
                       cursor: 'pointer',
-                      borderRadius: 'var(--radius-sm)',
+                      borderRadius: '6px',
+                      transition: 'all var(--motion-fast) ease',
                     }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.04)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                   >
                     🎯 Socratic Hint
                   </button>
                   <button
                     onClick={() => { setSocraticMode('explain'); setShowModeMenu(false); }}
                     style={{
-                      padding: '6px 10px',
+                      padding: '8px 10px',
                       border: 'none',
                       background: 'none',
                       color: socraticMode === 'explain' ? 'var(--brand-primary)' : 'var(--text-secondary)',
-                      fontSize: '0.68rem',
-                      fontWeight: 600,
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
                       textAlign: 'left',
                       cursor: 'pointer',
-                      borderRadius: 'var(--radius-sm)',
+                      borderRadius: '6px',
+                      transition: 'all var(--motion-fast) ease',
                     }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.04)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                   >
                     📖 Full Explainer
                   </button>
                   <button
                     onClick={() => { setSocraticMode('challenge'); setShowModeMenu(false); }}
                     style={{
-                      padding: '6px 10px',
+                      padding: '8px 10px',
                       border: 'none',
                       background: 'none',
                       color: socraticMode === 'challenge' ? 'var(--brand-primary)' : 'var(--text-secondary)',
-                      fontSize: '0.68rem',
-                      fontWeight: 600,
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
                       textAlign: 'left',
                       cursor: 'pointer',
-                      borderRadius: 'var(--radius-sm)',
+                      borderRadius: '6px',
+                      transition: 'all var(--motion-fast) ease',
                     }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.04)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                   >
                     🤔 Challenge Mode
                   </button>

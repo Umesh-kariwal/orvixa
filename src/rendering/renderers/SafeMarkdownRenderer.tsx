@@ -62,39 +62,67 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
             <div
               key={i}
               style={{
-                margin: '16px 0',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--border-color)',
+                margin: '20px 0',
+                borderRadius: '16px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
                 overflow: 'hidden',
-                backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                backgroundColor: 'rgba(15, 15, 25, 0.6)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
                 display: 'flex',
                 flexDirection: 'column',
-                alignItems: 'center',
                 width: '100%',
-                maxWidth: '600px',
+                maxWidth: '680px',
+                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.4)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 15px 35px rgba(99, 102, 241, 0.15)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+                e.currentTarget.style.transform = 'none';
+                e.currentTarget.style.boxShadow = '0 10px 30px rgba(0, 0, 0, 0.3)';
               }}
             >
-              <img
-                src={match[2]}
-                alt={match[1]}
-                style={{
-                  width: '100%',
-                  height: 'auto',
-                  display: 'block',
-                  borderRadius: '8px 8px 0 0',
-                }}
-                loading="lazy"
-              />
+              <div style={{
+                padding: '10px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+                backgroundColor: 'rgba(255, 255, 255, 0.02)',
+              }}>
+                <span style={{ fontSize: '0.62rem', fontWeight: 900, color: 'var(--brand-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  🖼️ Labeled Diagram / Concept Illustration
+                </span>
+              </div>
+              <div style={{ width: '100%', overflow: 'hidden' }}>
+                <img
+                  src={match[2]}
+                  alt={match[1]}
+                  style={{
+                    width: '100%',
+                    height: 'auto',
+                    display: 'block',
+                    transition: 'transform 0.5s ease',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.02)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                  loading="lazy"
+                />
+              </div>
               {match[1] && (
                 <div
                   style={{
-                    fontSize: '0.72rem',
+                    fontSize: '0.75rem',
                     color: 'var(--text-secondary)',
-                    textAlign: 'center',
-                    padding: '8px 12px',
-                    borderTop: '1px solid var(--border-color)',
-                    width: '100%',
+                    padding: '12px 16px',
+                    borderTop: '1px solid rgba(255, 255, 255, 0.06)',
                     backgroundColor: 'rgba(255, 255, 255, 0.01)',
+                    lineHeight: '1.4',
                   }}
                 >
                   {match[1]}
