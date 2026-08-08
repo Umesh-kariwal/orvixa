@@ -13,7 +13,7 @@ export type PanelState =
   | 'OFFLINE'
   | 'SILENT';
 
-export type ActiveView = 'learning' | 'onboarding' | 'settings' | 'privacy';
+export type ActiveView = 'learning' | 'onboarding' | 'settings' | 'privacy' | 'dashboard';
 
 export interface LearningMessage {
   role: 'user' | 'assistant';

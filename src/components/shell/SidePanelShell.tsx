@@ -8,6 +8,7 @@ import { DashboardSidebar } from './DashboardSidebar';
 import { VoiceOverlay } from './VoiceOverlay';
 import { SettingsView } from '../views/SettingsView';
 import { PrivacyDashboard } from '../views/PrivacyDashboard';
+import { MasteryDashboard } from '../views/MasteryDashboard';
 
 export const SidePanelShell: React.FC = () => {
   const {
@@ -180,7 +181,10 @@ export const SidePanelShell: React.FC = () => {
   }
 
   const renderOverlayDrawer = () => {
-    if (currentView !== 'settings' && currentView !== 'privacy') return null;
+    if (currentView !== 'settings' && currentView !== 'privacy' && currentView !== 'dashboard') return null;
+    
+    const isDashboard = currentView === 'dashboard';
+    
     return (
       <div 
         onClick={() => setCurrentView('learning')}
@@ -201,8 +205,8 @@ export const SidePanelShell: React.FC = () => {
         <div 
           onClick={(e) => e.stopPropagation()}
           style={{
-            width: '85%',
-            maxWidth: '320px',
+            width: isDashboard ? '90%' : '85%',
+            maxWidth: isDashboard ? '400px' : '320px',
             height: '100%',
             backgroundColor: 'var(--bg-surface)',
             borderLeft: '1px solid var(--border-color)',
@@ -213,13 +217,15 @@ export const SidePanelShell: React.FC = () => {
             WebkitBackdropFilter: 'var(--glass-blur)',
           }}
         >
-          {currentView === 'settings' ? <SettingsView /> : <PrivacyDashboard />}
+          {currentView === 'settings' && <SettingsView />}
+          {currentView === 'privacy' && <PrivacyDashboard />}
+          {currentView === 'dashboard' && <MasteryDashboard />}
         </div>
       </div>
     );
   };
 
-  const isLearning = currentView === 'learning' || currentView === 'settings' || currentView === 'privacy';
+  const isLearning = currentView === 'learning' || currentView === 'settings' || currentView === 'privacy' || currentView === 'dashboard';
 
   // FLOATING MODE STYLES
   if (panelMode === 'floating') {

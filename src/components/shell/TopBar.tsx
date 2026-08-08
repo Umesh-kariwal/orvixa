@@ -9,6 +9,7 @@ import {
   GraduationCap,
   Settings,
   Trash2,
+  TrendingUp,
 } from 'lucide-react';
 
 export const TopBar: React.FC = () => {
@@ -260,6 +261,17 @@ export const TopBar: React.FC = () => {
               <Trash2 size={13} />
             </Button>
           )}
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setCurrentView(currentView === 'dashboard' ? 'learning' : 'dashboard')}
+            title="Mastery Dashboard"
+            aria-label="Mastery Dashboard"
+            style={{ padding: '6px', width: '28px', height: '28px', borderRadius: '50%' }}
+          >
+            <TrendingUp size={13} style={{ color: currentView === 'dashboard' ? 'var(--brand-primary)' : 'inherit' }} />
+          </Button>
 
           <Button
             variant="ghost"
