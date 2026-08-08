@@ -62,54 +62,56 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
             <div
               key={i}
               style={{
-                margin: '20px 0',
-                borderRadius: '16px',
+                margin: '10px 10px 10px 0',
+                borderRadius: '12px',
                 border: '1px solid rgba(255, 255, 255, 0.08)',
                 overflow: 'hidden',
                 backgroundColor: 'rgba(15, 15, 25, 0.6)',
                 backdropFilter: 'blur(12px)',
                 WebkitBackdropFilter: 'blur(12px)',
-                display: 'flex',
+                display: 'inline-flex',
                 flexDirection: 'column',
                 width: '100%',
-                maxWidth: '680px',
-                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
+                maxWidth: '340px',
+                boxShadow: '0 8px 20px rgba(0, 0, 0, 0.25)',
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                verticalAlign: 'top',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.4)';
                 e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 15px 35px rgba(99, 102, 241, 0.15)';
+                e.currentTarget.style.boxShadow = '0 12px 25px rgba(99, 102, 241, 0.12)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
                 e.currentTarget.style.transform = 'none';
-                e.currentTarget.style.boxShadow = '0 10px 30px rgba(0, 0, 0, 0.3)';
+                e.currentTarget.style.boxShadow = '0 8px 20px rgba(0, 0, 0, 0.25)';
               }}
             >
               <div style={{
-                padding: '10px 16px',
+                padding: '8px 12px',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
+                gap: '6px',
                 borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
                 backgroundColor: 'rgba(255, 255, 255, 0.02)',
               }}>
-                <span style={{ fontSize: '0.62rem', fontWeight: 900, color: 'var(--brand-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  🖼️ Labeled Diagram / Concept Illustration
+                <span style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--brand-primary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  🖼️ Visual Illustration
                 </span>
               </div>
-              <div style={{ width: '100%', overflow: 'hidden' }}>
+              <div style={{ width: '100%', height: '180px', overflow: 'hidden', backgroundColor: '#000000' }}>
                 <img
                   src={match[2]}
                   alt={match[1]}
                   style={{
                     width: '100%',
-                    height: 'auto',
+                    height: '100%',
+                    objectFit: 'cover',
                     display: 'block',
                     transition: 'transform 0.5s ease',
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.02)')}
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
                   onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
                   loading="lazy"
                 />
@@ -117,12 +119,12 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
               {match[1] && (
                 <div
                   style={{
-                    fontSize: '0.75rem',
+                    fontSize: '0.72rem',
                     color: 'var(--text-secondary)',
-                    padding: '12px 16px',
+                    padding: '8px 12px',
                     borderTop: '1px solid rgba(255, 255, 255, 0.06)',
                     backgroundColor: 'rgba(255, 255, 255, 0.01)',
-                    lineHeight: '1.4',
+                    lineHeight: '1.35',
                   }}
                 >
                   {match[1]}

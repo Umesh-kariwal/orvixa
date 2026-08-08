@@ -20,6 +20,7 @@ import { DashboardSidebar } from '../shell/DashboardSidebar';
 import { SettingsView } from '../views/SettingsView';
 import { PrivacyDashboard } from '../views/PrivacyDashboard';
 import { MasteryDashboard } from '../views/MasteryDashboard';
+import { VoiceOverlay } from '../shell/VoiceOverlay';
 
 export const WorkspaceLayout: React.FC = () => {
   const {
@@ -581,6 +582,9 @@ export const WorkspaceLayout: React.FC = () => {
       }}>
         {renderActiveWorkspaceView()}
       </div>
+
+      {/* Standalone Voice Mode Modal Overlay */}
+      <VoiceOverlay />
     </div>
   );
 };

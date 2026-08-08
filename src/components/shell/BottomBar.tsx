@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { 
   CornerDownLeft, 
   Scan, 
-  Headphones, 
+  Mic, 
   Paperclip, 
   Link2, 
   Sliders,
@@ -294,7 +294,7 @@ export const BottomBar: React.FC = () => {
               <Scan size={14} style={{ color: isContextReady ? 'var(--brand-primary)' : 'var(--text-muted)' }} />
             </Button>
 
-            {/* 3. Voice overlay headphones */}
+            {/* 3. Voice Assistant Microphone Button */}
             <Button
               variant="ghost"
               size="sm"
@@ -305,17 +305,31 @@ export const BottomBar: React.FC = () => {
                   setShowVoiceAlert(true);
                 }
               }}
-              title={isSpeechSupported ? "Start Voice Session" : "Voice mode is supported in Chrome. Edge WebView2 does not support speech recognition."}
+              title={isSpeechSupported ? "Start Voice Session" : "Voice assistant notice (click to read)"}
               style={{ 
                 padding: '6px',
                 borderRadius: '50%',
                 width: '32px',
                 height: '32px',
                 cursor: 'pointer',
-                opacity: 1
+                opacity: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(99, 102, 241, 0.05)',
+                border: '1px solid rgba(99, 102, 241, 0.15)',
+                transition: 'all var(--motion-fast) ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.15)';
+                e.currentTarget.style.transform = 'scale(1.08)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.05)';
+                e.currentTarget.style.transform = 'none';
               }}
             >
-              <Headphones size={14} style={{ color: 'var(--text-muted)' }} />
+              <Mic size={14} style={{ color: 'var(--brand-primary)' }} />
             </Button>
 
             {/* 4. Socratic Mode Selector Dropdown */}

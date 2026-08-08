@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useSidePanel } from '@/hooks/useSidePanel';
 import { useVoice } from '@/hooks/useVoice';
 import { Button } from '@/components/ui/Button';
-import { X, Mic, Volume2, Headphones } from 'lucide-react';
+import { X, Mic, Volume2, AudioLines } from 'lucide-react';
 
 export const VoiceOverlay: React.FC = () => {
   const { 
@@ -151,7 +151,7 @@ export const VoiceOverlay: React.FC = () => {
       {/* Top Header */}
       <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Headphones size={16} style={{ color: 'var(--brand-primary)' }} />
+          <AudioLines size={16} style={{ color: 'var(--brand-primary)' }} />
           <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'rgba(255,255,255,0.7)', letterSpacing: '0.5px' }}>
             ORVIXA VOICE MODE
           </span>

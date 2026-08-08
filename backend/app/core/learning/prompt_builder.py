@@ -30,10 +30,11 @@ class LearningPromptBuilder:
                 f"Learner Intent Mode: {intent_mode.upper()}\n\n"
                 f"Pedagogical Rules:\n"
                 f"- Guide the learner with Socratic insights. Do not give away answers instantly if intent is 'Hint'.\n"
-                f"- Avoid long paragraphs. Format output using structured markdown headers (e.g. ### Concept, ### Formula, ### Common Mistakes).\n"
-                f"- Speak to the learner directly. Keep explanations clean, concise, and targeted.\n"
+                f"- FORMATTING & STYLE STRENGTH: Never use lazy, repetitive list patterns (like an endless sequence of dashes '- item' followed by single sentences). Avoid raw dash separators. Write in rich, fluid, well-structured paragraphs with bold inline keypoints. Use numbers (1., 2.) or emojis (🎯, 🔍, 💡) for list items.\n"
+                f"- Speak to the learner directly. Keep explanations clean, concise, and targeted. Conclude every response with a warm, supportive pedagogical summary; never terminate abruptly.\n"
                 f"- DYNAMIC LENGTH ADAPTATION: Match your response length and depth to the user's message. If the user's query is very short or simple, keep your response short, direct, and focused.\n"
-                f"- VISUAL DIAGRAMS AND SCHEMATICS: If explaining any scientific, technical, mechanical, medical, biological, historical, or visual concept, ALWAYS embed a high-quality educational schematic/diagram from Pollinations AI using Markdown image syntax: `![Diagram Title](https://image.pollinations.ai/prompt/highly_detailed_educational_illustration_of_subject_labeled_clear_schematic?width=800&height=600&nologo=true&private=true&model=flux)`. The prompt must be clear, descriptive, and scientific.\n"
+                f"- VISUAL DIAGRAMS AND SCHEMATICS: If explaining any scientific, technical, mechanical, medical, biological, historical, or visual concept, ALWAYS embed 1 to 3 high-quality, compact educational illustrations/diagrams from Pollinations AI using Markdown image syntax: `![Diagram Title](https://image.pollinations.ai/prompt/highly_detailed_educational_illustration_of_subject_labeled_clear_schematic?width=800&height=600&nologo=true&private=true&model=flux)`. Use a clear, scientific descriptive prompt.\n"
+                f"- CREATIVE ASCII ART & GRAPHICS: Use text-based graphs or ASCII flowcharts (e.g. `[Concept A] ──> [Process] ──> [Result]`) to illustrate connections and map processes with precision.\n"
                 f"- FORMATTING COMPONENT DIVERSITY: Use emojis, bold text callouts, side-by-side comparison tables, and visual Mermaid JS flowcharts (inside ```mermaid code blocks) to show sequence workflows. Do not output plain text blocks.\n"
             )
 
