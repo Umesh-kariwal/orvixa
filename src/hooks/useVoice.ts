@@ -108,14 +108,45 @@ export const useVoice = () => {
       
       // Select best high-quality female voice matching the language
       const voices = window.speechSynthesis.getVoices();
-      const langVoices = voices.filter(v => v.lang.toLowerCase().replace('_', '-').includes(voiceLanguage.toLowerCase()));
+      
+      // Robust filter for language voices
+      let langVoices = voices.filter(v => {
+        const langLower = v.lang.toLowerCase().replace('_', '-');
+        const selectedLower = voiceLanguage.toLowerCase();
+        
+        if (selectedLower.includes('hi')) {
+          // Match Hindi locales or voice names containing Hindi/Heera/Kalpana
+          return langLower.includes('hi') || 
+                 v.name.toLowerCase().includes('hindi') || 
+                 v.name.toLowerCase().includes('heera') || 
+                 v.name.toLowerCase().includes('kalpana');
+        }
+        return langLower.includes(selectedLower);
+      });
+      
+      // Fallback: If no native Hindi voice is installed, use an Indian English voice to read Hindi with a proper Indian accent!
+      if (langVoices.length === 0 && voiceLanguage.includes('hi')) {
+        langVoices = voices.filter(v => 
+          v.lang.toLowerCase().includes('en-in') || 
+          v.name.toLowerCase().includes('india') ||
+          v.name.toLowerCase().includes('ravina') ||
+          v.name.toLowerCase().includes('heera')
+        );
+      }
       
       let bestVoice = langVoices.find(v => v.name.includes('Google') && v.name.toLowerCase().includes('female'));
       if (!bestVoice) {
         bestVoice = langVoices.find(v => v.name.includes('Google'));
       }
       if (!bestVoice) {
-        bestVoice = langVoices.find(v => v.name.includes('Zira') || v.name.includes('Hazel') || v.name.includes('Heera') || v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('natural'));
+        bestVoice = langVoices.find(v => 
+          v.name.includes('Zira') || 
+          v.name.includes('Hazel') || 
+          v.name.includes('Heera') || 
+          v.name.includes('Kalpana') ||
+          v.name.toLowerCase().includes('female') || 
+          v.name.toLowerCase().includes('natural')
+        );
       }
       if (!bestVoice && langVoices.length > 0) {
         bestVoice = langVoices[0];
@@ -125,8 +156,23 @@ export const useVoice = () => {
         utterance.voice = bestVoice;
       }
       
-      utterance.rate = 0.98; // Very natural speaking pace
-      utterance.pitch = 1.05; // Slightly warmer, more human tone
+      // DYNAMIC VOCAL EXPRESSIONS (Pitch & Rate micro-intonation tuning)
+      let rate = 0.98;
+      let pitch = 1.05;
+      const lowerText = cleanText.toLowerCase();
+
+      if (cleanText.includes('!') || lowerText.includes('wow') || lowerText.includes('great') || lowerText.includes('excellent') || lowerText.includes('awesome')) {
+        pitch = 1.12; // Higher, enthusiastic pitch
+        rate = 1.03;  // Slightly faster, excited speaking pace
+      } else if (cleanText.includes('?') || lowerText.includes('why') || lowerText.includes('how') || lowerText.includes('what')) {
+        pitch = 1.08; // Curious rising intonation
+      } else if (lowerText.includes('sorry') || lowerText.includes('unfortunately') || lowerText.includes('failed') || lowerText.includes('error')) {
+        pitch = 0.95; // Lower, warmer, empathetic pitch
+        rate = 0.90;  // Slower, comforting pace
+      }
+
+      utterance.rate = rate;
+      utterance.pitch = pitch;
 
       utterance.onstart = () => {
         setIsSpeaking(true);
