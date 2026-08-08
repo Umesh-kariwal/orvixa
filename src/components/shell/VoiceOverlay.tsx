@@ -93,7 +93,7 @@ export const VoiceOverlay: React.FC = () => {
       stopListening();
       stopSpeaking();
     };
-  }, [isVoiceModeActive]);
+  }, [isVoiceModeActive, startListening, executeAction, stopListening, stopSpeaking]);
 
   // 3. Detect when a new AI message arrives to read it out loud (ensures TTS triggers in voice overlay mode)
   useEffect(() => {
