@@ -7,7 +7,8 @@ import {
   TrendingUp, 
   Trash2, 
   MessageSquare,
-  Database
+  Database,
+  Sparkles
 } from 'lucide-react';
 import { ContentAreaHost } from '../shell/ContentAreaHost';
 import { BottomBar } from '../shell/BottomBar';
@@ -213,8 +214,7 @@ export const WorkspaceLayout: React.FC = () => {
 
         {/* Navigation Item Links */}
         <div style={{
-          flex: 1,
-          padding: '10px 12px',
+          padding: '10px 12px 0 12px',
           display: 'flex',
           flexDirection: 'column',
           gap: '4px',
@@ -306,6 +306,51 @@ export const WorkspaceLayout: React.FC = () => {
             <Shield size={14} style={{ color: currentView === 'privacy' ? 'var(--emerald-primary)' : 'inherit' }} />
             <span>Privacy Guard</span>
           </button>
+        </div>
+
+        {/* 1.5. Desktop App Download Link Promotion */}
+        <div style={{
+          margin: '20px 12px 12px 12px',
+          padding: '14px',
+          borderRadius: 'var(--radius-lg)',
+          backgroundColor: 'rgba(99, 102, 241, 0.05)',
+          border: '1px solid rgba(99, 102, 241, 0.2)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Sparkles size={12} style={{ color: 'var(--brand-primary)' }} />
+            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--brand-primary)', textTransform: 'uppercase' }}>Native Desktop Suite</span>
+          </div>
+          <p style={{ margin: 0, fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+            Get system-wide focus, offline persistence, and auto-updates.
+          </p>
+          <a
+            href="https://github.com/Umesh-kariwal/orvixa/releases/download/app-v0.1.0/Orvixa_0.1.0_x64-setup.exe"
+            style={{
+              width: '100%',
+              padding: '8px',
+              borderRadius: '20px',
+              backgroundColor: 'var(--brand-primary)',
+              color: '#ffffff',
+              fontSize: '0.72rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              textDecoration: 'none',
+              textAlign: 'center',
+              boxShadow: '0 4px 12px rgba(124, 58, 237, 0.2)',
+              transition: 'transform var(--motion-fast) ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.02)')}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = 'none')}
+          >
+            Download Desktop (.exe)
+          </a>
         </div>
 
         {/* 2. Socratic Document Vault (Importer Form) */}
