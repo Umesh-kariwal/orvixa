@@ -541,10 +541,9 @@ export const ContentAreaHost: React.FC = () => {
             </Badge>
             <Text variant="muted">Live Stream</Text>
           </div>
-
           <OrvixaIntentRenderer
             rawPayload={{
-              intent_type: selectedAction?.action_id === 'hint' ? 'SOCRATIC_HINT' : 'SAFE_MARKDOWN',
+              intent_type: 'SAFE_MARKDOWN',
               confidence: 0.98,
               summary: streamingText,
               structured_data: { markdown: streamingText },
