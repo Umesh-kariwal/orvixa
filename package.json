@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build && npx esbuild src/extension/background.ts --bundle --outfile=dist/background.js && npx esbuild src/extension/contentScript.ts --bundle --outfile=dist/contentScript.js",
+    "tauri": "tauri",
     "lint": "oxlint",
     "preview": "vite preview"
   },
