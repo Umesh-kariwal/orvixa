@@ -1,48 +1,67 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSidePanel } from '@/hooks/useSidePanel';
 import { 
   Award, 
   BookOpen, 
   Lightbulb, 
   Users, 
-  Compass,
-  CheckSquare,
-  HelpCircle
+  Trash2,
+  Download,
+  Play,
+  Pause,
+  RotateCcw,
+  AudioLines
 } from 'lucide-react';
 
 export const DashboardSidebar: React.FC = () => {
-  const { activeContext, executeAction, conversationHistory } = useSidePanel();
+  const { 
+    executeAction, 
+    conversationHistory, 
+    resetSession,
+    setIsVoiceModeActive
+  } = useSidePanel();
 
-  // Deduce active topic
-  const activeTopic = activeContext?.pageContext?.topic || activeContext?.inferred_topic || 'orvixa';
-  const isMicroscopeTopic = activeTopic.toLowerCase().includes('microscope') || 
-                            conversationHistory.some(m => m.text.toLowerCase().includes('microscope'));
+  // 1. Session Focus Timer States (Stopwatch)
+  const [seconds, setSeconds] = useState<number>(0);
+  const [isActive, setIsActive] = useState<boolean>(true);
 
-  // Socratic study tasks
-  const studyTasks = [
-    { label: 'Examine Subject Structure', done: conversationHistory.length > 0 },
-    { label: 'Solve Socratic Clue Ladder', done: conversationHistory.some(m => m.text.toLowerCase().includes('clue') || m.text.toLowerCase().includes('hint')) },
-    { label: 'Verify concept with Quiz', done: conversationHistory.some(m => m.text.toLowerCase().includes('quiz') || m.text.toLowerCase().includes('question')) },
-    { label: 'Conduct voice recap evaluation', done: false }
-  ];
-
-  // Dynamic session flashcards / glossaries
-  const getDynamicGlossary = () => {
-    if (isMicroscopeTopic) {
-      return [
-        { term: 'Light Path', def: 'Illuminates specimen using lenses.' },
-        { term: 'Objective Lens', def: 'Core lens providing zoom magnification.' },
-        { term: 'Fine Focus knob', def: 'Sharpens image resolution details.' }
-      ];
+  useEffect(() => {
+    let interval: any = null;
+    if (isActive) {
+      interval = setInterval(() => {
+        setSeconds((prev) => prev + 1);
+      }, 1000);
+    } else {
+      clearInterval(interval);
     }
-    return [
-      { term: 'Core Hypothesis', def: 'Underlying conceptual foundation.' },
-      { term: 'Workflow Path', def: 'Sequential execution diagram.' },
-      { term: 'Key Formula/Metric', def: 'Mathematical or data-backed rule.' }
-    ];
+    return () => clearInterval(interval);
+  }, [isActive]);
+
+  const handleResetTimer = () => {
+    setSeconds(0);
+    setIsActive(false);
   };
 
-  const glossary = getDynamicGlossary();
+  const formatTime = (secs: number) => {
+    const mins = Math.floor(secs / 60);
+    const remainingSecs = secs % 60;
+    return `${mins.toString().padStart(2, '0')}:${remainingSecs.toString().padStart(2, '0')}`;
+  };
+
+  // 2. Export Study Guide handler
+  const handleExportTranscript = () => {
+    if (conversationHistory.length === 0) return;
+    const text = conversationHistory
+      .map((msg) => `${msg.role === 'user' ? 'Learner' : 'Orvixa'}: ${msg.text}`)
+      .join('\n\n');
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `orvixa-study-notes-${Date.now()}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div style={{
@@ -57,7 +76,7 @@ export const DashboardSidebar: React.FC = () => {
       userSelect: 'none',
       height: '100%',
     }}>
-      {/* 1. Study Subject Blueprint */}
+      {/* Widget 1: Interactive Focus Timer */}
       <div style={{
         background: 'rgba(255,255,255,0.02)',
         border: '1px solid var(--border-color)',
@@ -65,39 +84,83 @@ export const DashboardSidebar: React.FC = () => {
         padding: '16px',
         display: 'flex',
         flexDirection: 'column',
+        alignItems: 'center',
         gap: '12px',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--brand-primary)' }}>
-          <Compass size={14} />
-          <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            Study Blueprint
-          </span>
-        </div>
+        <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-secondary)' }}>
+          ⏱️ Study Focus Timer
+        </span>
         
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>Focus Subject:</span>
-          <span style={{ fontWeight: 800, color: '#ffffff', fontSize: '0.9rem', textTransform: 'capitalize' }}>
-            {activeTopic === 'orvixa' ? 'General Subject Study' : activeTopic}
-          </span>
+        <div style={{ 
+          fontSize: '2rem', 
+          fontWeight: 900, 
+          fontFamily: 'monospace', 
+          color: isActive ? 'var(--brand-primary)' : 'var(--text-muted)',
+          letterSpacing: '2px',
+          textShadow: isActive ? '0 0 10px rgba(99, 102, 241, 0.2)' : 'none',
+          transition: 'all 0.3s ease',
+        }}>
+          {formatTime(seconds)}
         </div>
 
-        {/* Dynamic Study Checklist */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px solid var(--border-color)', paddingTop: '10px', marginTop: '4px' }}>
-          <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '2px' }}>
-            Socratic Progress Check:
-          </span>
-          {studyTasks.map((t, idx) => (
-            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.68rem' }}>
-              <CheckSquare size={12} style={{ color: t.done ? 'var(--emerald-primary)' : 'var(--text-muted)', flexShrink: 0 }} />
-              <span style={{ color: t.done ? 'var(--text-secondary)' : 'var(--text-muted)', textDecoration: t.done ? 'line-through' : 'none' }}>
-                {t.label}
-              </span>
-            </div>
-          ))}
+        {/* Stopwatch interactive buttons */}
+        <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+          <button
+            onClick={() => setIsActive(!isActive)}
+            style={{
+              flex: 1,
+              padding: '6px 10px',
+              borderRadius: '20px',
+              backgroundColor: isActive ? 'rgba(245, 158, 11, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+              border: isActive ? '1px solid rgba(245, 158, 11, 0.25)' : '1px solid rgba(16, 185, 129, 0.25)',
+              color: isActive ? 'var(--amber-primary)' : 'var(--emerald-primary)',
+              fontSize: '0.68rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              transition: 'all var(--motion-fast) ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.03)')}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = 'none')}
+          >
+            {isActive ? <Pause size={12} /> : <Play size={12} />}
+            {isActive ? 'Pause' : 'Resume'}
+          </button>
+
+          <button
+            onClick={handleResetTimer}
+            style={{
+              padding: '6px 12px',
+              borderRadius: '20px',
+              backgroundColor: 'rgba(255,255,255,0.02)',
+              border: '1px solid var(--border-color)',
+              color: 'var(--text-secondary)',
+              fontSize: '0.68rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all var(--motion-fast) ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
+              e.currentTarget.style.color = 'var(--rose-primary)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)';
+              e.currentTarget.style.color = 'var(--text-secondary)';
+            }}
+          >
+            <RotateCcw size={12} />
+          </button>
         </div>
       </div>
 
-      {/* 2. Interactive Flashcards / Definitions Glossary */}
+      {/* Widget 2: Quick Study Modules (Interactive Study triggers) */}
       <div style={{
         background: 'rgba(255,255,255,0.02)',
         border: '1px solid var(--border-color)',
@@ -107,49 +170,7 @@ export const DashboardSidebar: React.FC = () => {
         flexDirection: 'column',
         gap: '12px',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--brand-primary)' }}>
-          <HelpCircle size={14} />
-          <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            Interactive Glossaries
-          </span>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {glossary.map((card, idx) => (
-            <div 
-              key={idx}
-              style={{
-                padding: '8px 10px',
-                borderRadius: '8px',
-                backgroundColor: 'rgba(255, 255, 255, 0.01)',
-                border: '1px solid var(--border-color)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '2px',
-              }}
-            >
-              <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--brand-primary)' }}>
-                {card.term}
-              </span>
-              <span style={{ fontSize: '0.62rem', color: 'var(--text-secondary)', lineHeight: '1.3' }}>
-                {card.def}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* 3. Action Shortcut Cards */}
-      <div style={{
-        background: 'rgba(255,255,255,0.02)',
-        border: '1px solid var(--border-color)',
-        borderRadius: '12px',
-        padding: '16px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px',
-      }}>
-        <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#ffffff', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+        <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
           Quick Study Modules
         </span>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -198,6 +219,104 @@ export const DashboardSidebar: React.FC = () => {
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Widget 3: Workspace Utility Center */}
+      <div style={{
+        background: 'rgba(255,255,255,0.02)',
+        border: '1px solid var(--border-color)',
+        borderRadius: '12px',
+        padding: '16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+      }}>
+        <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          Workspace Control Panel
+        </span>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {/* A. Launch Voice Call Assistant */}
+          <button
+            onClick={() => setIsVoiceModeActive(true)}
+            style={{
+              padding: '10px 14px',
+              borderRadius: '8px',
+              backgroundColor: 'rgba(99, 102, 241, 0.05)',
+              border: '1px solid rgba(99, 102, 241, 0.15)',
+              color: 'var(--brand-primary)',
+              fontSize: '0.72rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all var(--motion-fast) ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.12)')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.05)')}
+          >
+            <AudioLines size={13} />
+            Launch Voice Assistant
+          </button>
+
+          {/* B. Export Study Guide */}
+          <button
+            onClick={handleExportTranscript}
+            disabled={conversationHistory.length === 0}
+            style={{
+              padding: '10px 14px',
+              borderRadius: '8px',
+              backgroundColor: 'rgba(255, 255, 255, 0.02)',
+              border: '1px solid var(--border-color)',
+              color: conversationHistory.length === 0 ? 'var(--text-muted)' : 'var(--text-secondary)',
+              fontSize: '0.72rem',
+              fontWeight: 800,
+              cursor: conversationHistory.length === 0 ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all var(--motion-fast) ease',
+            }}
+            onMouseEnter={(e) => {
+              if (conversationHistory.length > 0) {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.06)';
+                e.currentTarget.style.color = '#ffffff';
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.02)';
+              e.currentTarget.style.color = conversationHistory.length === 0 ? 'var(--text-muted)' : 'var(--text-secondary)';
+            }}
+          >
+            <Download size={13} />
+            Export Study Notes (.txt)
+          </button>
+
+          {/* C. Reset Session */}
+          <button
+            onClick={resetSession}
+            style={{
+              padding: '10px 14px',
+              borderRadius: '8px',
+              backgroundColor: 'rgba(239, 68, 68, 0.05)',
+              border: '1px solid rgba(239, 68, 68, 0.15)',
+              color: 'var(--rose-primary)',
+              fontSize: '0.72rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all var(--motion-fast) ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.12)')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.05)')}
+          >
+            <Trash2 size={13} />
+            Reset Learning Room
+          </button>
         </div>
       </div>
     </div>
