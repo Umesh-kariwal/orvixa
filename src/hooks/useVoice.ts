@@ -1,5 +1,81 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
+// Web Audio API Acoustic Accompaniment Engine for Real Singing & Melody
+class WebAudioSongAccompaniment {
+  private ctx: AudioContext | null = null;
+  private timerId: any = null;
+
+  private initContext() {
+    if (!this.ctx) {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioCtx) {
+        this.ctx = new AudioCtx();
+      }
+    }
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+  }
+
+  startSongBackingTrack() {
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+      this.stop();
+
+      // Musical Chord Progressions (Hz): C Major -> A Minor -> F Major -> G Major
+      const chordProgression = [
+        [261.63, 329.63, 392.00], // C4, E4, G4
+        [220.00, 261.63, 329.63], // A3, C4, E4
+        [174.61, 220.00, 261.63], // F3, A3, C4
+        [196.00, 246.94, 293.66], // G3, B3, D4
+      ];
+
+      let chordIndex = 0;
+
+      const playChord = () => {
+        if (!this.ctx) return;
+        const freqs = chordProgression[chordIndex % chordProgression.length];
+        chordIndex++;
+
+        freqs.forEach((freq) => {
+          if (!this.ctx) return;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+
+          // Soft acoustic volume envelope (ambient lo-fi synth chord)
+          gain.gain.setValueAtTime(0.001, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.035, this.ctx.currentTime + 0.15);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 1.2);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(this.ctx.currentTime);
+          osc.stop(this.ctx.currentTime + 1.3);
+        });
+      };
+
+      playChord();
+      this.timerId = setInterval(playChord, 1200);
+    } catch (e) {
+      console.warn('Web Audio backing track unavailable:', e);
+    }
+  }
+
+  stop() {
+    if (this.timerId) {
+      clearInterval(this.timerId);
+      this.timerId = null;
+    }
+  }
+}
+
+const backingTrackEngine = new WebAudioSongAccompaniment();
+
 export const useVoice = () => {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -14,7 +90,6 @@ export const useVoice = () => {
   const recognitionRef = useRef<any>(null);
   const listeningRef = useRef<boolean>(false);
   
-  // Speech queue for fluid multi-clause expressive playback
   const utteranceQueueRef = useRef<SpeechSynthesisUtterance[]>([]);
   const isProcessingQueueRef = useRef<boolean>(false);
 
@@ -26,7 +101,6 @@ export const useVoice = () => {
     localStorage.setItem('orvixa_voice_language', voiceLanguage);
   }, [voiceLanguage]);
 
-  // Helper to select best voice
   const selectBestVoice = useCallback((lang: string): SpeechSynthesisVoice | null => {
     const voices = window.speechSynthesis.getVoices();
     if (!voices || voices.length === 0) return null;
@@ -68,7 +142,6 @@ export const useVoice = () => {
     return best || null;
   }, []);
 
-  // Initialize Speech Recognition
   const initRecognition = useCallback(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) return null;
@@ -87,6 +160,7 @@ export const useVoice = () => {
     try {
       setHasPermissionError(false);
       window.speechSynthesis.cancel();
+      backingTrackEngine.stop();
       utteranceQueueRef.current = [];
       isProcessingQueueRef.current = false;
       setIsSpeaking(false);
@@ -145,7 +219,6 @@ export const useVoice = () => {
     listeningRef.current = false;
   }, []);
 
-  // Process Utterance Queue sequentially for seamless streaming speech playback
   const processQueue = useCallback(() => {
     if (isProcessingQueueRef.current || utteranceQueueRef.current.length === 0) return;
 
@@ -154,6 +227,7 @@ export const useVoice = () => {
     if (!nextUtterance) {
       isProcessingQueueRef.current = false;
       setIsSpeaking(false);
+      backingTrackEngine.stop();
       return;
     }
 
@@ -165,6 +239,7 @@ export const useVoice = () => {
         processQueue();
       } else {
         setIsSpeaking(false);
+        backingTrackEngine.stop();
       }
     };
 
@@ -175,6 +250,7 @@ export const useVoice = () => {
         processQueue();
       } else {
         setIsSpeaking(false);
+        backingTrackEngine.stop();
       }
     };
 
@@ -182,26 +258,27 @@ export const useVoice = () => {
   }, []);
 
   /**
-   * EXPRESSIVE VOCAL SYNTHESIS & MELODIC SINGING ENGINE
-   * 1. Detects singing / song requests and applies harmonic pitch scale contour & rhythm pauses.
-   * 2. Slices long responses into clauses to speak instantly (< 200ms delay).
-   * 3. Applies emotional prosody (excitement, curiosity, empathy, whispering, laughter).
+   * ADVANCED SINGING & MUSICAL CADENCE ENGINE
+   * 1. Detects song / singing intent.
+   * 2. Triggers Web Audio API acoustic musical backing chords.
+   * 3. Performs word-level musical pitch stepping (C4-E4-G4-A4-B4 scale).
    */
   const speakText = useCallback((text: string) => {
     if (!text) return;
 
     try {
-      window.speechSynthesis.cancel(); // Reset any old speech
+      window.speechSynthesis.cancel();
+      backingTrackEngine.stop();
       utteranceQueueRef.current = [];
       isProcessingQueueRef.current = false;
 
-      // Clean markdown tags, code blocks, and emojis for smooth TTS
       const cleanText = text
-        .replace(/```[\s\S]*?```/g, ' [Code Block] ')
+        .replace(/```[\s\S]*?```/g, ' ')
         .replace(/`([^`]+)`/g, '$1')
         .replace(/[*#$_\\]/g, ' ')
-        .replace(/!\[.*?\]\(.*?\)/g, '') // remove images
+        .replace(/!\[.*?\]\(.*?\)/g, '')
         .replace(/\[IMAGE:.*?\]/g, '')
+        .replace(/"/g, ' ')
         .trim();
 
       if (!cleanText) return;
@@ -209,80 +286,109 @@ export const useVoice = () => {
       const voice = selectBestVoice(voiceLanguage);
       const lowerText = cleanText.toLowerCase();
 
-      // Check if text is a song / poem / nursery rhyme / singing performance
       const isSinging = (
         lowerText.includes('🎵') ||
         lowerText.includes('🎶') ||
         lowerText.includes('song') ||
         lowerText.includes('gaana') ||
         lowerText.includes('singing') ||
-        lowerText.includes('la la la') ||
-        lowerText.includes('sa re ga ma') ||
-        lowerText.includes('chanda mama') ||
+        lowerText.includes('chaiyya') ||
+        lowerText.includes('mangal bhavan') ||
         lowerText.includes('twinkle twinkle') ||
-        lowerText.includes('verse') ||
-        lowerText.includes('chorus')
+        lowerText.includes('la la la') ||
+        lowerText.includes('sa re ga ma')
       );
 
-      // Pitch Scale Contours for Melodic Singing Performance
-      const singingPitchContour = [1.35, 1.12, 1.42, 1.18, 1.48, 1.25, 1.38, 1.10];
+      if (isSinging) {
+        // Start Web Audio Acoustic Backing Track
+        backingTrackEngine.startSongBackingTrack();
 
-      // Break text into clauses / phrases for micro-tuned playback
-      const phrases = cleanText
-        .split(/(?<=[.!?\n])\s+/)
-        .map(p => p.trim())
-        .filter(p => p.length > 0);
+        // Musical Pitch Steps (Sa Re Ga Ma / Do Re Mi Scale)
+        const scalePitches = [1.25, 1.40, 1.15, 1.35, 1.48, 1.20, 1.30, 1.10];
 
-      phrases.forEach((phrase, index) => {
-        const u = new SpeechSynthesisUtterance(phrase);
-        u.lang = voiceLanguage;
-        if (voice) u.voice = voice;
+        // Break song into rhythmic lines
+        const lines = cleanText
+          .split(/(?<=[.!?\n])\s+/)
+          .map(l => l.trim())
+          .filter(l => l.length > 0);
 
-        const phraseLower = phrase.toLowerCase();
+        lines.forEach((line, lineIdx) => {
+          // Exclude conversational introductory lines from heavy singing pitch
+          if (lineIdx === 0 && (line.toLowerCase().includes('gaana') || line.toLowerCase().includes('suna'))) {
+            const intro = new SpeechSynthesisUtterance(line);
+            intro.lang = voiceLanguage;
+            if (voice) intro.voice = voice;
+            intro.pitch = 1.05;
+            intro.rate = 1.0;
+            utteranceQueueRef.current.push(intro);
+            return;
+          }
 
-        if (isSinging) {
-          // --- MELODIC SINGING MODE ---
-          // Modulate pitch sequentially along a musical scale contour
-          const pitchStep = singingPitchContour[index % singingPitchContour.length];
-          u.pitch = pitchStep;
-          // Melodic rhythm: slightly slower, rhythmic legato pace
-          u.rate = (index % 2 === 0) ? 0.90 : 0.96;
-        } else {
-          // --- EXPRESSIVE VOCAL EMOTION ENGINE ---
+          // Group into musical melodic phrases
+          const words = line.split(/\s+/).filter(w => w.length > 0);
+          if (words.length === 0) return;
+
+          // Process words in rhythmic rhythmic pairs/triplets for musical melody
+          for (let i = 0; i < words.length; i += 3) {
+            const phrase = words.slice(i, i + 3).join(' ');
+            const u = new SpeechSynthesisUtterance(phrase);
+            u.lang = voiceLanguage;
+            if (voice) u.voice = voice;
+
+            const pitchIdx = (lineIdx * 3 + i) % scalePitches.length;
+            u.pitch = scalePitches[pitchIdx];
+
+            // Rhythmic Tempo Modulation (legato sustain vs staccato beat)
+            u.rate = (i % 2 === 0) ? 0.88 : 0.94;
+
+            utteranceQueueRef.current.push(u);
+          }
+        });
+      } else {
+        // --- NORMAL EXPRESSIVE VOCAL EMOTION ENGINE ---
+        const phrases = cleanText
+          .split(/(?<=[.!?\n])\s+/)
+          .map(p => p.trim())
+          .filter(p => p.length > 0);
+
+        phrases.forEach((phrase) => {
+          const u = new SpeechSynthesisUtterance(phrase);
+          u.lang = voiceLanguage;
+          if (voice) u.voice = voice;
+
+          const phraseLower = phrase.toLowerCase();
           let pitch = 1.05;
           let rate = 0.98;
 
-          if (phrase.includes('!') || phraseLower.includes('wow') || phraseLower.includes('great') || phraseLower.includes('awesome') || phraseLower.includes('haha') || phraseLower.includes('yay')) {
-            pitch = 1.22; // Enthusiastic, joyful high pitch
-            rate = 1.05;  // Cheerful, upbeat pace
-          } else if (phrase.includes('?') || phraseLower.includes('why') || phraseLower.includes('how') || phraseLower.includes('what')) {
-            pitch = 1.14; // Inquisitive, rising pitch contour
+          if (phrase.includes('!') || phraseLower.includes('wow') || phraseLower.includes('great') || phraseLower.includes('awesome') || phraseLower.includes('haha')) {
+            pitch = 1.22;
+            rate = 1.04;
+          } else if (phrase.includes('?') || phraseLower.includes('why') || phraseLower.includes('how')) {
+            pitch = 1.14;
             rate = 0.98;
-          } else if (phraseLower.includes('sorry') || phraseLower.includes('unfortunately') || phraseLower.includes('comfort') || phraseLower.includes('don\'t worry')) {
-            pitch = 0.94; // Warm, empathetic lower pitch
-            rate = 0.88;  // Comforting slow pace
-          } else if (phraseLower.includes('secret') || phraseLower.includes('shh') || phraseLower.includes('listen carefully')) {
-            pitch = 0.88; // Soft whispering tone
-            rate = 0.82;
+          } else if (phraseLower.includes('sorry') || phraseLower.includes('comfort') || phraseLower.includes('don\'t worry')) {
+            pitch = 0.94;
+            rate = 0.88;
           }
 
           u.pitch = pitch;
           u.rate = rate;
-        }
 
-        utteranceQueueRef.current.push(u);
-      });
+          utteranceQueueRef.current.push(u);
+        });
+      }
 
-      // Start queue playback immediately
       processQueue();
     } catch (err) {
       console.error('Failed to execute expressive text-to-speech:', err);
       setIsSpeaking(false);
+      backingTrackEngine.stop();
     }
   }, [voiceLanguage, selectBestVoice, processQueue]);
 
   const stopSpeaking = useCallback(() => {
     window.speechSynthesis.cancel();
+    backingTrackEngine.stop();
     utteranceQueueRef.current = [];
     isProcessingQueueRef.current = false;
     setIsSpeaking(false);
