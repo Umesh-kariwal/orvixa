@@ -1,80 +1,104 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { env } from '@/config/env';
 
-// Web Audio API Acoustic Accompaniment Engine for Real Singing & Melody
-class WebAudioSongAccompaniment {
-  private ctx: AudioContext | null = null;
-  private timerId: any = null;
+// ──────────────────────────────────────────────────────────────────
+// TTS endpoint (from env config)
+// ──────────────────────────────────────────────────────────────────
+const TTS_URL = `${env.apiBaseUrl}/tts/synthesize`;
 
-  private initContext() {
-    if (!this.ctx) {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioCtx) {
-        this.ctx = new AudioCtx();
-      }
-    }
-    if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume();
-    }
-  }
-
-  startSongBackingTrack() {
-    try {
-      this.initContext();
-      if (!this.ctx) return;
-      this.stop();
-
-      // Musical Chord Progressions (Hz): C Major -> A Minor -> F Major -> G Major
-      const chordProgression = [
-        [261.63, 329.63, 392.00], // C4, E4, G4
-        [220.00, 261.63, 329.63], // A3, C4, E4
-        [174.61, 220.00, 261.63], // F3, A3, C4
-        [196.00, 246.94, 293.66], // G3, B3, D4
-      ];
-
-      let chordIndex = 0;
-
-      const playChord = () => {
-        if (!this.ctx) return;
-        const freqs = chordProgression[chordIndex % chordProgression.length];
-        chordIndex++;
-
-        freqs.forEach((freq) => {
-          if (!this.ctx) return;
-          const osc = this.ctx.createOscillator();
-          const gain = this.ctx.createGain();
-
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-
-          // Soft acoustic volume envelope (ambient lo-fi synth chord)
-          gain.gain.setValueAtTime(0.001, this.ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.035, this.ctx.currentTime + 0.15);
-          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 1.2);
-
-          osc.connect(gain);
-          gain.connect(this.ctx.destination);
-
-          osc.start(this.ctx.currentTime);
-          osc.stop(this.ctx.currentTime + 1.3);
-        });
-      };
-
-      playChord();
-      this.timerId = setInterval(playChord, 1200);
-    } catch (e) {
-      console.warn('Web Audio backing track unavailable:', e);
-    }
-  }
-
-  stop() {
-    if (this.timerId) {
-      clearInterval(this.timerId);
-      this.timerId = null;
-    }
-  }
+// ──────────────────────────────────────────────────────────────────
+// Utility: Clean text for TTS (strip emojis, markdown, image tags)
+// ──────────────────────────────────────────────────────────────────
+function cleanTextForTTS(text: string): string {
+  return text
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/`[^`]+`/g, m => m.slice(1, -1))
+    .replace(/\[IMAGE:.*?\]/g, '')
+    .replace(/!\[.*?\]\(.*?\)/g, '')
+    // Remove ALL Unicode emojis (covers 🎵 🎶 🎼 and all others)
+    .replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27FF}\u{FE00}-\u{FEFF}]/gu, '')
+    .replace(/[*#_\\]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
-const backingTrackEngine = new WebAudioSongAccompaniment();
+// ──────────────────────────────────────────────────────────────────
+// Detect if text is a song / singing request
+// ──────────────────────────────────────────────────────────────────
+function detectSinging(text: string): boolean {
+  const lower = text.toLowerCase();
+  return (
+    lower.includes('twinkle') ||
+    lower.includes('chanda mama') ||
+    lower.includes('chaiyya') ||
+    lower.includes('mangal bhavan') ||
+    lower.includes('la la la') ||
+    lower.includes('sa re ga ma') ||
+    lower.includes('song') ||
+    lower.includes('gaana') ||
+    lower.includes('verse') ||
+    lower.includes('chorus')
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────
+// Backend Gemini TTS: Fetch and play audio
+// ──────────────────────────────────────────────────────────────────
+async function playGeminiTTS(
+  text: string,
+  apiKey: string | null,
+  isSinging: boolean,
+  onStart: () => void,
+  onEnd: () => void,
+  onError: () => void
+): Promise<void> {
+  const clean = cleanTextForTTS(text);
+  if (!clean) { onEnd(); return; }
+
+  try {
+    const body = {
+      text: clean,
+      voice: 'Aoede',
+      is_singing: isSinging,
+      gemini_api_key: apiKey || undefined,
+    };
+
+    const res = await fetch(TTS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok || res.status === 204) {
+      // Fallback to browser TTS if Gemini TTS unavailable
+      throw new Error('Gemini TTS unavailable');
+    }
+
+    const audioBuffer = await res.arrayBuffer();
+    if (!audioBuffer || audioBuffer.byteLength === 0) {
+      throw new Error('Empty audio response');
+    }
+
+    const blob = new Blob([audioBuffer], { type: 'audio/wav' });
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+
+    audio.onplay = onStart;
+    audio.onended = () => {
+      URL.revokeObjectURL(url);
+      onEnd();
+    };
+    audio.onerror = () => {
+      URL.revokeObjectURL(url);
+      onError();
+    };
+
+    await audio.play();
+  } catch (e) {
+    console.warn('Gemini TTS failed, falling back to browser TTS:', e);
+    onError();
+  }
+}
 
 export const useVoice = () => {
   const [isListening, setIsListening] = useState(false);
@@ -89,9 +113,7 @@ export const useVoice = () => {
 
   const recognitionRef = useRef<any>(null);
   const listeningRef = useRef<boolean>(false);
-  
-  const utteranceQueueRef = useRef<SpeechSynthesisUtterance[]>([]);
-  const isProcessingQueueRef = useRef<boolean>(false);
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     localStorage.setItem('orvixa_voice_enabled', String(voiceEnabled));
@@ -101,107 +123,90 @@ export const useVoice = () => {
     localStorage.setItem('orvixa_voice_language', voiceLanguage);
   }, [voiceLanguage]);
 
+  // ── Best browser voice selector (fallback only) ──────────────────
   const selectBestVoice = useCallback((lang: string): SpeechSynthesisVoice | null => {
     const voices = window.speechSynthesis.getVoices();
     if (!voices || voices.length === 0) return null;
 
     let langVoices = voices.filter(v => {
-      const langLower = v.lang.toLowerCase().replace('_', '-');
-      const selectedLower = lang.toLowerCase();
-      if (selectedLower.includes('hi')) {
-        return langLower.includes('hi') || 
-               v.name.toLowerCase().includes('hindi') || 
-               v.name.toLowerCase().includes('heera') || 
-               v.name.toLowerCase().includes('kalpana');
+      const ll = v.lang.toLowerCase().replace('_', '-');
+      const sl = lang.toLowerCase();
+      if (sl.includes('hi')) {
+        return ll.includes('hi') || v.name.toLowerCase().includes('hindi') ||
+               v.name.toLowerCase().includes('heera') || v.name.toLowerCase().includes('kalpana');
       }
-      return langLower.includes(selectedLower);
+      return ll.includes(sl);
     });
 
     if (langVoices.length === 0 && lang.includes('hi')) {
-      langVoices = voices.filter(v => 
-        v.lang.toLowerCase().includes('en-in') || 
-        v.name.toLowerCase().includes('india') ||
-        v.name.toLowerCase().includes('ravina') ||
-        v.name.toLowerCase().includes('heera')
+      langVoices = voices.filter(v =>
+        v.lang.toLowerCase().includes('en-in') || v.name.toLowerCase().includes('india')
       );
     }
 
     let best = langVoices.find(v => v.name.includes('Google') && v.name.toLowerCase().includes('female'));
     if (!best) best = langVoices.find(v => v.name.includes('Google'));
-    if (!best) {
-      best = langVoices.find(v => 
-        v.name.includes('Zira') || 
-        v.name.includes('Hazel') || 
-        v.name.includes('Heera') || 
-        v.name.includes('Kalpana') ||
-        v.name.toLowerCase().includes('female') || 
-        v.name.toLowerCase().includes('natural')
-      );
-    }
+    if (!best) best = langVoices.find(v => v.name.includes('Zira') || v.name.includes('Hazel') ||
+      v.name.toLowerCase().includes('female'));
     if (!best && langVoices.length > 0) best = langVoices[0];
     return best || null;
   }, []);
 
-  const initRecognition = useCallback(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) return null;
+  // ── Browser fallback TTS ─────────────────────────────────────────
+  const browserFallbackSpeak = useCallback((text: string, pitch = 1.05, rate = 0.98) => {
+    const clean = cleanTextForTTS(text);
+    if (!clean) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(clean);
+    u.lang = voiceLanguage;
+    u.pitch = pitch;
+    u.rate = rate;
+    const voice = selectBestVoice(voiceLanguage);
+    if (voice) u.voice = voice;
+    u.onstart = () => setIsSpeaking(true);
+    u.onend = () => setIsSpeaking(false);
+    u.onerror = () => setIsSpeaking(false);
+    window.speechSynthesis.speak(u);
+  }, [voiceLanguage, selectBestVoice]);
 
-    const rec = new SpeechRecognition();
+  // ── Speech Recognition ───────────────────────────────────────────
+  const initRecognition = useCallback(() => {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) return null;
+    const rec = new SR();
     rec.continuous = false;
     rec.interimResults = false;
     rec.lang = voiceLanguage;
-
     return rec;
   }, [voiceLanguage]);
 
   const startListening = useCallback((onResult: (text: string) => void) => {
     if (listeningRef.current) return;
-
     try {
       setHasPermissionError(false);
       window.speechSynthesis.cancel();
-      backingTrackEngine.stop();
-      utteranceQueueRef.current = [];
-      isProcessingQueueRef.current = false;
+      if (currentAudioRef.current) { currentAudioRef.current.pause(); }
       setIsSpeaking(false);
 
       const rec = initRecognition();
-      if (!rec) {
-        alert('Speech recognition is not supported in this browser.');
-        return;
-      }
+      if (!rec) { alert('Speech recognition not supported in this browser.'); return; }
 
       recognitionRef.current = rec;
       listeningRef.current = true;
 
-      rec.onstart = () => {
-        setIsListening(true);
-      };
-
+      rec.onstart = () => setIsListening(true);
       rec.onresult = (event: any) => {
         const text = event.results[0][0].transcript;
-        if (text) {
-          onResult(text);
-        }
+        if (text) onResult(text);
       };
-
       rec.onerror = (e: any) => {
-        console.error('Speech recognition error:', e);
         setIsListening(false);
         listeningRef.current = false;
-        if (e.error === 'not-allowed') {
-          setHasPermissionError(true);
-        }
+        if (e.error === 'not-allowed') setHasPermissionError(true);
       };
-
-      rec.onend = () => {
-        setIsListening(false);
-        listeningRef.current = false;
-      };
-
+      rec.onend = () => { setIsListening(false); listeningRef.current = false; };
       rec.start();
     } catch (err) {
-      console.error('Failed to start speech recognition:', err);
       setIsListening(false);
       listeningRef.current = false;
     }
@@ -209,188 +214,60 @@ export const useVoice = () => {
 
   const stopListening = useCallback(() => {
     if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch (e) {
-        // Ignore if already stopped
-      }
+      try { recognitionRef.current.stop(); } catch {}
     }
     setIsListening(false);
     listeningRef.current = false;
   }, []);
 
-  const processQueue = useCallback(() => {
-    if (isProcessingQueueRef.current || utteranceQueueRef.current.length === 0) return;
-
-    isProcessingQueueRef.current = true;
-    const nextUtterance = utteranceQueueRef.current.shift();
-    if (!nextUtterance) {
-      isProcessingQueueRef.current = false;
-      setIsSpeaking(false);
-      backingTrackEngine.stop();
-      return;
-    }
-
-    setIsSpeaking(true);
-
-    nextUtterance.onend = () => {
-      isProcessingQueueRef.current = false;
-      if (utteranceQueueRef.current.length > 0) {
-        processQueue();
-      } else {
-        setIsSpeaking(false);
-        backingTrackEngine.stop();
-      }
-    };
-
-    nextUtterance.onerror = (e) => {
-      console.error('Utterance playback error:', e);
-      isProcessingQueueRef.current = false;
-      if (utteranceQueueRef.current.length > 0) {
-        processQueue();
-      } else {
-        setIsSpeaking(false);
-        backingTrackEngine.stop();
-      }
-    };
-
-    window.speechSynthesis.speak(nextUtterance);
-  }, []);
-
-  /**
-   * ADVANCED SINGING & MUSICAL CADENCE ENGINE
-   * 1. Detects song / singing intent.
-   * 2. Triggers Web Audio API acoustic musical backing chords.
-   * 3. Performs word-level musical pitch stepping (C4-E4-G4-A4-B4 scale).
-   */
-  const speakText = useCallback((text: string) => {
+  // ── PRIMARY: speakText → Gemini TTS → Audio element ─────────────
+  const speakText = useCallback(async (text: string) => {
     if (!text) return;
 
-    try {
-      window.speechSynthesis.cancel();
-      backingTrackEngine.stop();
-      utteranceQueueRef.current = [];
-      isProcessingQueueRef.current = false;
-
-      const cleanText = text
-        .replace(/```[\s\S]*?```/g, ' ')
-        .replace(/`([^`]+)`/g, '$1')
-        .replace(/[*#$_\\]/g, ' ')
-        .replace(/!\[.*?\]\(.*?\)/g, '')
-        .replace(/\[IMAGE:.*?\]/g, '')
-        .replace(/"/g, ' ')
-        .trim();
-
-      if (!cleanText) return;
-
-      const voice = selectBestVoice(voiceLanguage);
-      const lowerText = cleanText.toLowerCase();
-
-      const isSinging = (
-        lowerText.includes('🎵') ||
-        lowerText.includes('🎶') ||
-        lowerText.includes('song') ||
-        lowerText.includes('gaana') ||
-        lowerText.includes('singing') ||
-        lowerText.includes('chaiyya') ||
-        lowerText.includes('mangal bhavan') ||
-        lowerText.includes('twinkle twinkle') ||
-        lowerText.includes('la la la') ||
-        lowerText.includes('sa re ga ma')
-      );
-
-      if (isSinging) {
-        // Start Web Audio Acoustic Backing Track
-        backingTrackEngine.startSongBackingTrack();
-
-        // Musical Pitch Steps (Sa Re Ga Ma / Do Re Mi Scale)
-        const scalePitches = [1.25, 1.40, 1.15, 1.35, 1.48, 1.20, 1.30, 1.10];
-
-        // Break song into rhythmic lines
-        const lines = cleanText
-          .split(/(?<=[.!?\n])\s+/)
-          .map(l => l.trim())
-          .filter(l => l.length > 0);
-
-        lines.forEach((line, lineIdx) => {
-          // Exclude conversational introductory lines from heavy singing pitch
-          if (lineIdx === 0 && (line.toLowerCase().includes('gaana') || line.toLowerCase().includes('suna'))) {
-            const intro = new SpeechSynthesisUtterance(line);
-            intro.lang = voiceLanguage;
-            if (voice) intro.voice = voice;
-            intro.pitch = 1.05;
-            intro.rate = 1.0;
-            utteranceQueueRef.current.push(intro);
-            return;
-          }
-
-          // Group into musical melodic phrases
-          const words = line.split(/\s+/).filter(w => w.length > 0);
-          if (words.length === 0) return;
-
-          // Process words in rhythmic rhythmic pairs/triplets for musical melody
-          for (let i = 0; i < words.length; i += 3) {
-            const phrase = words.slice(i, i + 3).join(' ');
-            const u = new SpeechSynthesisUtterance(phrase);
-            u.lang = voiceLanguage;
-            if (voice) u.voice = voice;
-
-            const pitchIdx = (lineIdx * 3 + i) % scalePitches.length;
-            u.pitch = scalePitches[pitchIdx];
-
-            // Rhythmic Tempo Modulation (legato sustain vs staccato beat)
-            u.rate = (i % 2 === 0) ? 0.88 : 0.94;
-
-            utteranceQueueRef.current.push(u);
-          }
-        });
-      } else {
-        // --- NORMAL EXPRESSIVE VOCAL EMOTION ENGINE ---
-        const phrases = cleanText
-          .split(/(?<=[.!?\n])\s+/)
-          .map(p => p.trim())
-          .filter(p => p.length > 0);
-
-        phrases.forEach((phrase) => {
-          const u = new SpeechSynthesisUtterance(phrase);
-          u.lang = voiceLanguage;
-          if (voice) u.voice = voice;
-
-          const phraseLower = phrase.toLowerCase();
-          let pitch = 1.05;
-          let rate = 0.98;
-
-          if (phrase.includes('!') || phraseLower.includes('wow') || phraseLower.includes('great') || phraseLower.includes('awesome') || phraseLower.includes('haha')) {
-            pitch = 1.22;
-            rate = 1.04;
-          } else if (phrase.includes('?') || phraseLower.includes('why') || phraseLower.includes('how')) {
-            pitch = 1.14;
-            rate = 0.98;
-          } else if (phraseLower.includes('sorry') || phraseLower.includes('comfort') || phraseLower.includes('don\'t worry')) {
-            pitch = 0.94;
-            rate = 0.88;
-          }
-
-          u.pitch = pitch;
-          u.rate = rate;
-
-          utteranceQueueRef.current.push(u);
-        });
-      }
-
-      processQueue();
-    } catch (err) {
-      console.error('Failed to execute expressive text-to-speech:', err);
-      setIsSpeaking(false);
-      backingTrackEngine.stop();
+    // Stop any existing playback
+    window.speechSynthesis.cancel();
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
     }
-  }, [voiceLanguage, selectBestVoice, processQueue]);
+    setIsSpeaking(false);
+
+    const isSinging = detectSinging(text);
+    const geminiKey = localStorage.getItem('orvixa_gemini_key') ||
+                      (() => {
+                        try {
+                          const s = localStorage.getItem('orvixa_system_settings');
+                          return s ? JSON.parse(s)?.geminiApiKey : null;
+                        } catch { return null; }
+                      })();
+
+    // Try Gemini TTS backend first
+    await playGeminiTTS(
+      text,
+      geminiKey,
+      isSinging,
+      () => setIsSpeaking(true),
+      () => setIsSpeaking(false),
+      () => {
+        // Fallback: browser TTS with expressive settings
+        const clean = cleanTextForTTS(text);
+        const lc = clean.toLowerCase();
+        let pitch = 1.05, rate = 0.98;
+        if (isSinging) { pitch = 1.20; rate = 0.92; }
+        else if (clean.includes('!') || lc.includes('wow') || lc.includes('great')) { pitch = 1.18; rate = 1.04; }
+        else if (clean.includes('?')) { pitch = 1.12; }
+        else if (lc.includes('sorry') || lc.includes('don\'t worry')) { pitch = 0.94; rate = 0.88; }
+        browserFallbackSpeak(clean, pitch, rate);
+      }
+    );
+  }, [browserFallbackSpeak]);
 
   const stopSpeaking = useCallback(() => {
     window.speechSynthesis.cancel();
-    backingTrackEngine.stop();
-    utteranceQueueRef.current = [];
-    isProcessingQueueRef.current = false;
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
     setIsSpeaking(false);
   }, []);
 
