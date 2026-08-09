@@ -14,6 +14,101 @@ const getMermaidUrl = (spec: string): string => {
   }
 };
 
+// Self-contained image card with error/retry support
+const ImageCard: React.FC<{ src: string; alt: string }> = ({ src, alt }) => {
+  const [status, setStatus] = React.useState<'loading' | 'loaded' | 'error'>('loading');
+  const [retryKey, setRetryKey] = React.useState(0);
+
+  return (
+    <div
+      style={{
+        margin: '0',
+        borderRadius: '12px',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        overflow: 'hidden',
+        backgroundColor: 'rgba(15, 15, 25, 0.6)',
+        display: 'inline-flex',
+        flexDirection: 'column',
+        width: '100%',
+        maxWidth: '340px',
+        boxShadow: '0 8px 20px rgba(0, 0, 0, 0.25)',
+        transition: 'all 0.3s ease',
+        verticalAlign: 'top',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.4)';
+        e.currentTarget.style.transform = 'translateY(-2px)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+        e.currentTarget.style.transform = 'none';
+      }}
+    >
+      <div style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.06)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+        <span style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--brand-primary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          🖼️ Visual Illustration
+        </span>
+      </div>
+
+      <div style={{ width: '100%', height: '180px', backgroundColor: 'rgba(10,10,20,0.9)', position: 'relative', overflow: 'hidden' }}>
+        {status === 'loading' && (
+          <div style={{
+            position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            backgroundColor: 'rgba(10,10,20,0.9)',
+          }}>
+            <div style={{
+              width: '32px', height: '32px', borderRadius: '50%',
+              border: '3px solid rgba(99,102,241,0.2)',
+              borderTopColor: 'var(--brand-primary)',
+              animation: 'spin 0.8s linear infinite',
+            }} />
+          </div>
+        )}
+        {status === 'error' && (
+          <div style={{
+            position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '12px',
+          }}>
+            <span style={{ fontSize: '1.5rem' }}>🖼️</span>
+            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textAlign: 'center' }}>Image failed to load</span>
+            <button
+              onClick={() => { setStatus('loading'); setRetryKey(k => k + 1); }}
+              style={{
+                fontSize: '0.62rem', fontWeight: 800, color: 'var(--brand-primary)',
+                background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)',
+                borderRadius: '12px', padding: '4px 10px', cursor: 'pointer',
+              }}
+            >
+              Retry
+            </button>
+          </div>
+        )}
+        <img
+          key={retryKey}
+          src={src}
+          alt={alt}
+          style={{
+            width: '100%', height: '100%', objectFit: 'cover', display: 'block',
+            opacity: status === 'loaded' ? 1 : 0,
+            transition: 'opacity 0.4s ease, transform 0.5s ease',
+          }}
+          onLoad={() => setStatus('loaded')}
+          onError={() => setStatus('error')}
+          onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
+          onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+          loading="lazy"
+          crossOrigin="anonymous"
+        />
+      </div>
+      {alt && (
+        <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', padding: '8px 12px', borderTop: '1px solid rgba(255,255,255,0.06)', lineHeight: '1.35' }}>
+          {alt}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload }) => {
   const content = payload.summary || payload.structured_data?.markdown || '';
 
@@ -58,6 +153,12 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
       if (part.startsWith('![') && part.includes('](')) {
         const match = part.match(/!\[(.*?)\]\((.*?)\)/);
         if (match) {
+          // Decode HTML entities that LLMs sometimes inject into URLs (&amp; → &)
+          const decodedUrl = match[2]
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"');
           return (
             <div
               key={i}
@@ -102,7 +203,7 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
               </div>
               <div style={{ width: '100%', height: '180px', overflow: 'hidden', backgroundColor: '#000000' }}>
                 <img
-                  src={match[2]}
+                  src={decodedUrl}
                   alt={match[1]}
                   style={{
                     width: '100%',
@@ -506,7 +607,34 @@ export const SafeMarkdownRenderer: React.FC<RendererComponentProps> = ({ payload
       continue;
     }
 
-    // 6. Paragraphs handler
+    // 6a. Block-level standalone image lines (e.g. lines that are ONLY ![alt](url))
+    if (line.startsWith('![') && line.includes('](') && line.endsWith(')')) {
+      flushList(idx);
+      const imgMatch = line.match(/^!\[(.*?)\]\((.*?)\)$/);
+      if (imgMatch) {
+        const decodedUrl = imgMatch[2]
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"');
+        renderedBlocks.push(
+          <div
+            key={`img-block-${idx}`}
+            style={{
+              margin: '12px 0',
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '10px',
+            }}
+          >
+            <ImageCard key={`imgc-${idx}`} src={decodedUrl} alt={imgMatch[1]} />
+          </div>
+        );
+        continue;
+      }
+    }
+
+    // 6b. Paragraphs handler (also catches inline images in text)
     flushList(idx);
     renderedBlocks.push(
       <p
