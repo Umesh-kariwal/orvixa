@@ -38,11 +38,12 @@ export const SettingsView: React.FC = () => {
   }, []);
 
   const handleSaveSettings = () => {
-    // Save Gemini API Key via useSidePanel context
+    // Save Gemini API Key via useSidePanel context (for chat completions)
     saveApiKey(apiKeyInput.trim());
 
     // Save remaining preferences to localStorage
     const systemSettings = {
+      geminiApiKey: apiKeyInput.trim(),  // also saved here for image generation
       nvidiaApiKey: nvidiaApiKey.trim(),
       aiEngine,
       learningStyle,
