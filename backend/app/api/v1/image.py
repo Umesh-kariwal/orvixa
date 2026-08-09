@@ -1,16 +1,23 @@
 """
 Image generation endpoint.
-Primary: Google Gemini Imagen 3 (via user-supplied key or env key)
-Fallback: Pollinations.ai (free, no key required)
+Primary: Google Gemini Imagen 4.0 / 3.0 via official `google-genai` SDK
+  - Fully supports both new `AQ.` authentication keys and legacy `AIzaSy` keys.
+Fallback: Pollinations.ai (free, high speed, fallback)
 """
 import base64
 import urllib.parse
-import httpx
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel
 from typing import Optional
 from app.core.config import settings
 from app.core.logging import logger
+
+try:
+    from google import genai
+    from google.genai import types
+    GENAI_AVAILABLE = True
+except ImportError:
+    GENAI_AVAILABLE = False
 
 router = APIRouter()
 
@@ -19,73 +26,65 @@ class ImageGenerationRequest(BaseModel):
     prompt: str
     width: int = 800
     height: int = 600
-    gemini_api_key: Optional[str] = None   # client can pass their own key
+    gemini_api_key: Optional[str] = None  # client can pass key dynamically from settings
 
 
 @router.post("/generate-image")
 async def generate_image(req: ImageGenerationRequest):
     """
     Generate an educational diagram/image from a text prompt.
-    1. Tries Google Gemini Imagen 3 if any API key is available.
-    2. Falls back to Pollinations.ai (free, no key).
-    Returns { url: str, source: str, base64: Optional[str] }
+    1. Attempts Gemini Imagen generation using the official `google-genai` SDK.
+    2. Falls back seamlessly to Pollinations.ai if key is missing or request fails.
+    Returns JSON: { "url": str, "source": str }
     """
-    # Resolve the API key: prefer client-supplied, then env
     api_key = req.gemini_api_key or settings.GEMINI_API_KEY
 
-    # --- 1. Attempt Gemini Imagen 3 ---
-    if api_key:
+    if api_key and GENAI_AVAILABLE:
         try:
-            result = await _generate_with_gemini_imagen(
-                prompt=req.prompt,
-                api_key=api_key,
-            )
+            result = await _generate_with_google_sdk(prompt=req.prompt, api_key=api_key)
             if result:
                 return result
         except Exception as e:
-            logger.warning(f"Gemini Imagen generation failed, falling back to Pollinations: {e}")
+            logger.warning(f"Google Gemini Imagen generation failed ({e}), falling back to Pollinations.")
 
-    # --- 2. Fallback: Pollinations.ai ---
     return _build_pollinations_response(req.prompt, req.width, req.height)
 
 
-async def _generate_with_gemini_imagen(prompt: str, api_key: str) -> Optional[dict]:
-    """Call Gemini Imagen 3 via REST API and return a base64 data URL."""
-    url = (
-        f"https://generativelanguage.googleapis.com/v1beta/models/"
-        f"imagen-3.0-generate-002:predict?key={api_key}"
-    )
-    payload = {
-        "instances": [{"prompt": prompt}],
-        "parameters": {
-            "sampleCount": 1,
-            "aspectRatio": "4:3",
-        }
-    }
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.post(url, json=payload)
-        if resp.status_code != 200:
-            logger.warning(f"Gemini Imagen HTTP {resp.status_code}: {resp.text[:200]}")
-            return None
+async def _generate_with_google_sdk(prompt: str, api_key: str) -> Optional[dict]:
+    """Call Google Generative AI SDK for Imagen generation."""
+    client = genai.Client(api_key=api_key)
 
-        data = resp.json()
-        predictions = data.get("predictions", [])
-        if not predictions:
-            return None
+    # Try supported Imagen models in order of speed and capability
+    candidate_models = [
+        "imagen-4.0-fast-generate-001",
+        "imagen-4.0-generate-001",
+        "imagen-3.0-generate-002",
+    ]
 
-        b64_image = predictions[0].get("bytesBase64Encoded")
-        mime_type = predictions[0].get("mimeType", "image/png")
+    for model_name in candidate_models:
+        try:
+            result = client.models.generate_images(
+                model=model_name,
+                prompt=prompt,
+                config=types.GenerateImagesConfig(
+                    number_of_images=1,
+                    aspect_ratio="4:3",
+                    output_mime_type="image/jpeg",
+                ),
+            )
+            if result and result.generated_images:
+                img_bytes = result.generated_images[0].image.image_bytes
+                b64_str = base64.b64encode(img_bytes).decode("utf-8")
+                data_url = f"data:image/jpeg;base64,{b64_str}"
+                return {
+                    "url": data_url,
+                    "source": f"gemini-{model_name}",
+                }
+        except Exception as err:
+            logger.debug(f"Model {model_name} failed: {err}")
+            continue
 
-        if not b64_image:
-            return None
-
-        # Return as data URL so frontend can display inline without CORS issues
-        data_url = f"data:{mime_type};base64,{b64_image}"
-        return {
-            "url": data_url,
-            "source": "gemini-imagen-3",
-            "base64": b64_image,
-        }
+    return None
 
 
 def _build_pollinations_response(prompt: str, width: int, height: int) -> dict:
