@@ -31,7 +31,45 @@ export interface AutonomousTaskPlan {
 export function buildAutonomousPlan(prompt: string): AutonomousTaskPlan | null {
   const t = prompt.toLowerCase().trim();
 
-  // Multi-step: YouTube Video Search + WhatsApp Sharing
+  // 1. Multi-Step: E-Commerce Multi-Store Price Comparison
+  if (t.includes('compare') || t.includes('price') || t.includes('deal') || (t.includes('amazon') && t.includes('flipkart'))) {
+    const item = t.replace(/compare|price|of|deal|deals|on|amazon|flipkart|google|shopping|karo|dikhao|search/gi, '').trim() || 'iPhone 15';
+    return {
+      goal: `Multi-Store Price & Deal Comparison for "${item}"`,
+      steps: [
+        { id: 1, title: `Search "${item}" on Amazon Store`, actionType: 'search_amazon', status: 'pending', detail: item },
+        { id: 2, title: `Search "${item}" on Flipkart Store`, actionType: 'search_flipkart', status: 'pending', detail: item },
+        { id: 3, title: `Aggregate Prices via Google Shopping`, actionType: 'search_google_shopping', status: 'pending', detail: item },
+      ]
+    };
+  }
+
+  // 2. Multi-Step: Google Calendar Meeting & Event Scheduler
+  if (t.includes('calendar') || t.includes('schedule') || t.includes('meeting') || t.includes('reminder')) {
+    const title = t.replace(/schedule|meeting|reminder|calendar|create|event|karo|on|for|with/gi, '').trim() || 'Important Meeting';
+    return {
+      goal: `Schedule Calendar Event: "${title}"`,
+      steps: [
+        { id: 1, title: `Format Event Title & Time Parameters`, actionType: 'format_meeting', status: 'pending', detail: title },
+        { id: 2, title: `Launch Google Calendar Event Creator`, actionType: 'create_calendar_event', status: 'pending', detail: title },
+      ]
+    };
+  }
+
+  // 3. Multi-Step: Web Research + Summarize + Email Compose
+  if ((t.includes('search') || t.includes('google') || t.includes('research')) && (t.includes('email') || t.includes('gmail') || t.includes('mail'))) {
+    const topic = t.replace(/email|gmail|mail|google|search|research|bhejo|send|to|ko|about|on/gi, '').trim() || 'Latest AI Developments';
+    return {
+      goal: `Research "${topic}", Extract Summary & Draft Email`,
+      steps: [
+        { id: 1, title: `Execute Deep Web Search for "${topic}"`, actionType: 'google_search', status: 'pending', detail: topic },
+        { id: 2, title: `Synthesize Key Insights via Gemini Context Engine`, actionType: 'summarize_page', status: 'pending', detail: topic },
+        { id: 3, title: `Draft Email with Research Insights`, actionType: 'email_compose', status: 'pending', detail: topic },
+      ]
+    };
+  }
+
+  // 4. Multi-Step: YouTube Video Search + WhatsApp Sharing
   if ((t.includes('youtube') || t.includes('song')) && t.includes('whatsapp')) {
     const recipientMatch = t.match(/([a-zA-Z0-9_]+)\s+(?:ko|message|bhejo|send)/i);
     const recipient = recipientMatch ? recipientMatch[1] : 'Contact';
@@ -47,20 +85,7 @@ export function buildAutonomousPlan(prompt: string): AutonomousTaskPlan | null {
     };
   }
 
-  // Multi-step: Web Research + Summarize + Email Compose
-  if ((t.includes('search') || t.includes('google') || t.includes('research')) && (t.includes('email') || t.includes('gmail') || t.includes('mail'))) {
-    const topic = t.replace(/email|gmail|mail|google|search|research|bhejo|send|to|ko|about|on/gi, '').trim() || 'Latest AI Developments';
-    return {
-      goal: `Research "${topic}", Extract Summary & Draft Email`,
-      steps: [
-        { id: 1, title: `Execute Deep Web Search for "${topic}"`, actionType: 'google_search', status: 'pending', detail: topic },
-        { id: 2, title: `Synthesize Key Insights via Gemini Context Engine`, actionType: 'summarize_page', status: 'pending', detail: topic },
-        { id: 3, title: `Draft Email with Research Insights`, actionType: 'email_compose', status: 'pending', detail: topic },
-      ]
-    };
-  }
-
-  // Multi-step: Spotify Play + Master Volume Adjust
+  // 5. Multi-Step: Spotify Play + Master Volume Adjust
   if (t.includes('spotify') && (t.includes('volume') || t.includes('sound') || t.includes('aawaaz'))) {
     const song = t.replace(/spotify|volume|sound|aawaaz|play|song|badhao|kam|karo|on|pe/gi, '').trim() || 'Top Songs';
     return {
@@ -88,7 +113,22 @@ export async function executeAutonomousPlan(
 
     const step = plan.steps[i];
     try {
-      if (step.actionType === 'resolve_yt') {
+      if (step.actionType === 'search_amazon') {
+        await openUrl(`https://www.amazon.in/s?k=${encodeURIComponent(step.detail || '')}`);
+        step.status = 'completed';
+      } else if (step.actionType === 'search_flipkart') {
+        await openUrl(`https://www.flipkart.com/search?q=${encodeURIComponent(step.detail || '')}`);
+        step.status = 'completed';
+      } else if (step.actionType === 'search_google_shopping') {
+        await openUrl(`https://www.google.com/search?tbm=shop&q=${encodeURIComponent(step.detail || '')}`);
+        step.status = 'completed';
+      } else if (step.actionType === 'format_meeting') {
+        step.status = 'completed';
+      } else if (step.actionType === 'create_calendar_event') {
+        const calUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(step.detail || 'Meeting')}&details=Created+via+Orvixa+AI+Agent`;
+        await openUrl(calUrl);
+        step.status = 'completed';
+      } else if (step.actionType === 'resolve_yt') {
         const vidId = await resolveYouTubeVideoId(step.detail || 'Kesariya');
         ytWatchUrl = vidId ? `https://www.youtube.com/watch?v=${vidId}` : `https://www.youtube.com/results?search_query=${encodeURIComponent(step.detail || 'Kesariya')}`;
         step.status = 'completed';
