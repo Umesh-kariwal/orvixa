@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useSidePanel } from '@/hooks/useSidePanel';
 import { useVoice } from '@/hooks/useVoice';
 import { Button } from '@/components/ui/Button';
@@ -27,12 +27,15 @@ export const VoiceOverlay: React.FC = () => {
   const [transcribedText, setTranscribedText] = useState('');
   const [statusBadge, setStatusBadge] = useState<string | null>(null);
   const [lastProcessedMsgCount, setLastProcessedMsgCount] = useState(conversationHistory.length);
+  const submittedRef = useRef(false); // instant flag when speech submitted
 
   // ── HANDLE USER SPEECH ───────────────────────────────────────
   const handleUserSpeech = useCallback(async (text: string) => {
     if (!text.trim()) return;
     setTranscribedText(text);
     setStatusBadge(null);
+    submittedRef.current = true;       // ← instant: switch state before thinkingStep updates
+    setVoiceState('thinking');         // ← show "Soch raha hoon" immediately
 
     const cmd = parseVoiceCommand(text);
 
@@ -76,6 +79,7 @@ export const VoiceOverlay: React.FC = () => {
     if (!isVoiceModeActive) return;
 
     startNewSession();
+    submittedRef.current = false;
     setVoiceState('listening');
     setTranscribedText('');
     setStatusBadge(null);
@@ -89,9 +93,16 @@ export const VoiceOverlay: React.FC = () => {
   // ── SYNC VISUAL STATE ─────────────────────────────────────
   useEffect(() => {
     if (!isVoiceModeActive) return;
-    if (thinkingStep !== 'idle') setVoiceState('thinking');
-    else if (isSpeaking) setVoiceState('speaking');
-    else setVoiceState('listening');
+    if (thinkingStep !== 'idle') {
+      submittedRef.current = false;
+      setVoiceState('thinking');
+    } else if (isSpeaking) {
+      submittedRef.current = false;
+      setVoiceState('speaking');
+    } else if (!submittedRef.current) {
+      // Only go back to listening if we haven't just submitted
+      setVoiceState('listening');
+    }
   }, [thinkingStep, isSpeaking, isVoiceModeActive]);
 
   // ── READ AI RESPONSES ALOUD ───────────────────────────────

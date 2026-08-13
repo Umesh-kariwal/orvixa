@@ -231,7 +231,7 @@ export const useVoice = () => {
             interimTranscriptRef.current = '';
             onResult(toSubmit);
           }
-        }, 900);
+        }, 450);
       }
     };
 
