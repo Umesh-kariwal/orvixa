@@ -69,19 +69,21 @@ export function triggerMediaControl(action: 'next' | 'previous' | 'pause' | 'pla
 }
 
 export async function autoPlayYouTubeVideo(songQuery: string): Promise<void> {
-  const q = songQuery.trim();
-  if (!q) return;
+  const cleanQ = songQuery
+    .replace(/\b(youtube|yt|open|kholo|aur|pe|par|me|mein|search|dhundo|dhoondo|karo|bhejo|bhej|play|bajao|chalao|sunao|lagao|gao|gaao|song|gaana|gana|music|video|i|want|to|listen|for|find|look)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim() || songQuery.trim();
 
-  // 1. Intelligent Direct Video ID Resolver via HTML Proxy
+  if (!cleanQ) return;
+
+  // 1. Try Invidious Public Video ID Resolver API
   try {
-    const rawRes = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(`https://www.youtube.com/results?search_query=${encodeURIComponent(q)}&sp=EgIQAQ%3D%3D`)}`);
-    if (rawRes.ok) {
-      const html = await rawRes.text();
-      const matches = html.match(/\/watch\?v=([a-zA-Z0-9_-]{11})/);
-      if (matches && matches[1]) {
-        const vidId = matches[1];
-        // Opens exact YouTube Watch Video URL (Auto-plays video on YouTube with zero manual clicks!)
-        await openUrl(`https://www.youtube.com/watch?v=${vidId}`);
+    const res = await fetch(`https://inv.tux.pizza/api/v1/search?q=${encodeURIComponent(cleanQ)}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data[0]?.videoId) {
+        // Direct YouTube Watch Video Page (Auto-plays on YouTube!)
+        await openUrl(`https://www.youtube.com/watch?v=${data[0].videoId}`);
         return;
       }
     }
@@ -89,9 +91,9 @@ export async function autoPlayYouTubeVideo(songQuery: string): Promise<void> {
     // fallback
   }
 
-  // 2. Secondary Piped API Resolver
+  // 2. Try Piped Music API Resolver
   try {
-    const res2 = await fetch(`https://pipedapi.kavin.rocks/search?q=${encodeURIComponent(q)}&filter=music_songs`);
+    const res2 = await fetch(`https://pipedapi.kavin.rocks/search?q=${encodeURIComponent(cleanQ)}&filter=music_songs`);
     if (res2.ok) {
       const data2 = await res2.json();
       const item = data2?.items?.[0];
@@ -105,8 +107,8 @@ export async function autoPlayYouTubeVideo(songQuery: string): Promise<void> {
     // fallback
   }
 
-  // 3. Fallback to Video-filtered search page
-  await openUrl(`https://www.youtube.com/results?search_query=${encodeURIComponent(q)}&sp=EgIQAQ%253D%253D`);
+  // 3. Fallback: Search URL with Video Filter
+  await openUrl(`https://www.youtube.com/results?search_query=${encodeURIComponent(cleanQ)}&sp=EgIQAQ%253D%253D`);
 }
 
 export async function autoClickElementByText(text: string): Promise<any> {
@@ -213,9 +215,8 @@ export function parseVoiceCommand(text: string): VoiceAction {
 
     if (isYtExplicit || isPlayCmd) {
       let query = t
-        .replace(/^(i\s+want\s+to\s+)?(search|play|find|listen\s+to|look\s+for|open|kholo|chalao|bajao|sunao|lagao|gao)\s+/gi, '')
-        .replace(/\s+(on|in|pe|par|me|mein)\s+(youtube|yt)$/gi, '')
-        .replace(/\b(youtube|yt|song|gaana|gana|music|video)\b/gi, '')
+        .replace(/\b(youtube|yt|open|kholo|aur|pe|par|me|mein|search|dhundo|dhoondo|karo|bhejo|bhej|play|bajao|chalao|sunao|lagao|gao|gaao|song|gaana|gana|music|video|i|want|to|listen|for|find|look)\b/gi, '')
+        .replace(/\s+/g, ' ')
         .trim();
 
       if (!query || t === 'youtube' || t === 'open youtube' || t === 'youtube kholo' || t === 'youtube open') {
