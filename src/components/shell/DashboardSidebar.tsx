@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useSidePanel } from '@/hooks/useSidePanel';
 import { 
   Award, 
@@ -7,11 +7,15 @@ import {
   Users, 
   Trash2,
   Download,
-  Play,
-  Pause,
-  RotateCcw,
-  AudioLines
+  AudioLines,
+  Zap,
+  Globe,
+  Music,
+  Mail,
+  MessageSquare,
+  MapPin
 } from 'lucide-react';
+import { openUrl } from '@/hooks/desktopActions';
 
 export const DashboardSidebar: React.FC = () => {
   const { 
@@ -21,40 +25,13 @@ export const DashboardSidebar: React.FC = () => {
     setIsVoiceModeActive
   } = useSidePanel();
 
-  // 1. Session Focus Timer States (Stopwatch)
-  const [seconds, setSeconds] = useState<number>(0);
-  const [isActive, setIsActive] = useState<boolean>(true);
-
-  useEffect(() => {
-    let interval: any = null;
-    if (isActive) {
-      interval = setInterval(() => {
-        setSeconds((prev) => prev + 1);
-      }, 1000);
-    } else {
-      clearInterval(interval);
-    }
-    return () => clearInterval(interval);
-  }, [isActive]);
-
-  const handleResetTimer = () => {
-    setSeconds(0);
-    setIsActive(false);
-  };
-
-  const formatTime = (secs: number) => {
-    const mins = Math.floor(secs / 60);
-    const remainingSecs = secs % 60;
-    return `${mins.toString().padStart(2, '0')}:${remainingSecs.toString().padStart(2, '0')}`;
-  };
-
-  // 2. Export Study Guide handler
+  // Export Study Guide handler
   const handleExportTranscript = () => {
     if (conversationHistory.length === 0) return;
     const text = conversationHistory
       .map((msg) => `${msg.role === 'user' ? 'Learner' : 'Orvixa'}: ${msg.text}`)
       .join('\n\n');
-    const blob = new Blob([text], { type: 'text/plain' });
+    const blob = new Blob([text], { type: 'plain/text' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -76,7 +53,8 @@ export const DashboardSidebar: React.FC = () => {
       userSelect: 'none',
       height: '100%',
     }}>
-      {/* Widget 1: Interactive Focus Timer */}
+
+      {/* Widget 1: Extreme Desktop Automation Hub (Replaces old timer) */}
       <div style={{
         background: 'rgba(255,255,255,0.02)',
         border: '1px solid var(--border-color)',
@@ -84,79 +62,57 @@ export const DashboardSidebar: React.FC = () => {
         padding: '16px',
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
         gap: '12px',
       }}>
-        <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-secondary)' }}>
-          ⏱️ Study Focus Timer
-        </span>
-        
-        <div style={{ 
-          fontSize: '2rem', 
-          fontWeight: 900, 
-          fontFamily: 'monospace', 
-          color: isActive ? 'var(--brand-primary)' : 'var(--text-muted)',
-          letterSpacing: '2px',
-          textShadow: isActive ? '0 0 10px rgba(99, 102, 241, 0.2)' : 'none',
-          transition: 'all 0.3s ease',
-        }}>
-          {formatTime(seconds)}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--brand-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Zap size={13} /> Desktop Automation Hub
+          </span>
         </div>
+        
+        <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+          Voice or one-click control for your desktop apps & web apps:
+        </span>
 
-        {/* Stopwatch interactive buttons */}
-        <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-          <button
-            onClick={() => setIsActive(!isActive)}
-            style={{
-              flex: 1,
-              padding: '6px 10px',
-              borderRadius: '20px',
-              backgroundColor: isActive ? 'rgba(245, 158, 11, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-              border: isActive ? '1px solid rgba(245, 158, 11, 0.25)' : '1px solid rgba(16, 185, 129, 0.25)',
-              color: isActive ? 'var(--amber-primary)' : 'var(--emerald-primary)',
-              fontSize: '0.68rem',
-              fontWeight: 800,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              transition: 'all var(--motion-fast) ease',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.03)')}
-            onMouseLeave={(e) => (e.currentTarget.style.transform = 'none')}
-          >
-            {isActive ? <Pause size={12} /> : <Play size={12} />}
-            {isActive ? 'Pause' : 'Resume'}
-          </button>
-
-          <button
-            onClick={handleResetTimer}
-            style={{
-              padding: '6px 12px',
-              borderRadius: '20px',
-              backgroundColor: 'rgba(255,255,255,0.02)',
-              border: '1px solid var(--border-color)',
-              color: 'var(--text-secondary)',
-              fontSize: '0.68rem',
-              fontWeight: 800,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all var(--motion-fast) ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
-              e.currentTarget.style.color = 'var(--rose-primary)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)';
-              e.currentTarget.style.color = 'var(--text-secondary)';
-            }}
-          >
-            <RotateCcw size={12} />
-          </button>
+        {/* Quick App Shortcuts Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+          {[
+            { label: 'YouTube', icon: <Globe size={13} style={{ color: '#ef4444' }} />, url: 'https://www.youtube.com' },
+            { label: 'Spotify', icon: <Music size={13} style={{ color: '#10b981' }} />, url: 'https://open.spotify.com' },
+            { label: 'WhatsApp', icon: <MessageSquare size={13} style={{ color: '#25d366' }} />, url: 'https://web.whatsapp.com' },
+            { label: 'Gmail', icon: <Mail size={13} style={{ color: '#ea4335' }} />, url: 'https://mail.google.com' },
+            { label: 'Google Maps', icon: <MapPin size={13} style={{ color: '#4285f4' }} />, url: 'https://maps.google.com' },
+            { label: 'ChatGPT', icon: <Zap size={13} style={{ color: '#10a37f' }} />, url: 'https://chat.openai.com' },
+          ].map((app) => (
+            <button
+              key={app.label}
+              onClick={() => openUrl(app.url)}
+              style={{
+                padding: '8px 10px',
+                borderRadius: '8px',
+                background: 'rgba(255, 255, 255, 0.02)',
+                border: '1px solid var(--border-color)',
+                color: 'var(--text-primary)',
+                fontSize: '0.7rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all var(--motion-fast) ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.1)';
+                e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.02)';
+                e.currentTarget.style.borderColor = 'var(--border-color)';
+              }}
+            >
+              {app.icon} {app.label}
+            </button>
+          ))}
         </div>
       </div>
 
