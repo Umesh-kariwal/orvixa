@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useSidePanel } from '@/hooks/useSidePanel';
 import { useVoice } from '@/hooks/useVoice';
 import { Button } from '@/components/ui/Button';
-import { X, Mic, MicOff, Volume2, AudioLines, ExternalLink, Play, Search, Globe, FileText, ArrowDown, Sparkles, Square } from 'lucide-react';
+import { X, Mic, MicOff, Volume2, AudioLines, ExternalLink, Play, Search, Globe, FileText, Sparkles, Square } from 'lucide-react';
 import {
   parseVoiceCommand, executeVoiceAction, getCurrentPageContent,
   buildAutonomousPlan, executeAutonomousPlan, type AutonomousTaskPlan
@@ -196,10 +196,6 @@ export const VoiceOverlay: React.FC = () => {
       setIsMicMuted(true);
       stopListening();
     }
-  };
-
-  const handlePillClick = (promptText: string) => {
-    handleUserSpeech(promptText);
   };
 
   if (!isVoiceModeActive) return null;
@@ -417,20 +413,19 @@ export const VoiceOverlay: React.FC = () => {
         </div>
 
         {/* Pro Quick Action Pills */}
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center', maxWidth: '580px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center', maxWidth: '620px' }}>
           {[
-            { icon: <Play size={11} />, label: 'Spotify Play', prompt: 'play All Black song on spotify' },
-            { icon: <Play size={11} />, label: 'Next Song', prompt: 'Next song change karo' },
-            { icon: <Globe size={11} />, label: 'WhatsApp Msg', prompt: 'WhatsApp pe message karo Hello' },
-            { icon: <Search size={11} />, label: 'Click Button', prompt: 'Click on Login' },
-            { icon: <FileText size={11} />, label: 'Page Summarize', prompt: 'Is page ko summarize karo' },
-            { icon: <ArrowDown size={11} />, label: 'YouTube Auto', prompt: 'Chaiyya Chaiyya song bajao' },
+            { icon: <Search size={11} />, label: '🛍️ Price Compare', prompt: 'Compare price of iPhone 15 on Amazon and Flipkart' },
+            { icon: <Globe size={11} />, label: '💬 Song Share', prompt: 'Rahul ko WhatsApp par Kesariya song bhej do' },
+            { icon: <FileText size={11} />, label: '📧 Research & Mail', prompt: 'Research AI news on Google and draft email' },
+            { icon: <Play size={11} />, label: '📅 Schedule Meeting', prompt: 'Schedule team meeting tomorrow at 4 PM' },
+            { icon: <Volume2 size={11} />, label: '🔊 Volume Up', prompt: 'Aawaaz badhao' },
+            { icon: <Square size={11} />, label: '🔒 Lock PC', prompt: 'Screen lock karo' },
           ].map((pill) => (
             <button
               key={pill.label}
-              onClick={() => handlePillClick(pill.prompt)}
+              onClick={() => handleUserSpeech(pill.prompt)}
               style={{
-                display: 'flex', alignItems: 'center', gap: '5px',
                 fontSize: '0.72rem', padding: '5px 12px',
                 background: 'rgba(255, 255, 255, 0.04)',
                 border: '1px solid rgba(255, 255, 255, 0.09)',
