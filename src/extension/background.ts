@@ -110,19 +110,21 @@ chrome.runtime.onMessage.addListener((request: any, _sender: any, sendResponse: 
           
           const checkAndPlay = () => {
             attempts++;
-            const videoLinks = Array.from(document.querySelectorAll(
-              'ytd-video-renderer a#video-title, a#video-title, ytd-search a[href^="/watch?v="], a.ytd-thumbnail[href^="/watch?v="]'
-            )) as HTMLAnchorElement[];
+            
+            // Comprehensive video link query for YouTube search SPA
+            const allAnchors = Array.from(document.querySelectorAll('a[href*="/watch?v="]')) as HTMLAnchorElement[];
+            const validVideoAnchor = allAnchors.find(a => {
+              const href = a.href || '';
+              return href.includes('/watch?v=') && !href.includes('googleadservices') && !href.includes('&list=');
+            });
 
-            const targetLink = videoLinks.find(a => a.href && a.href.includes('/watch?v='));
-
-            if (targetLink && targetLink.href) {
-              window.location.href = targetLink.href;
+            if (validVideoAnchor && validVideoAnchor.href) {
+              window.location.href = validVideoAnchor.href;
               return true;
             }
 
             if (attempts < maxAttempts) {
-              setTimeout(checkAndPlay, 300);
+              setTimeout(checkAndPlay, 250);
             }
             return false;
           };

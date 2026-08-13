@@ -57,10 +57,22 @@ export const VoiceOverlay: React.FC = () => {
   const [activeYouTubeQuery, setActiveYouTubeQuery] = useState<string | null>(null);
   const [lastProcessedMsgCount, setLastProcessedMsgCount] = useState(conversationHistory.length);
   const submittedRef = useRef(false);
+  const lastExecutedTimeRef = useRef<number>(0);
+  const lastExecutedTextRef = useRef<string>('');
 
   // ── HANDLE USER SPEECH ───────────────────────────────────────
   const handleUserSpeech = useCallback(async (text: string) => {
-    if (!text.trim() || isMicMuted) return;
+    const now = Date.now();
+    const cleanText = text.trim().toLowerCase();
+    if (!cleanText || isMicMuted) return;
+
+    // Strict 2000ms debounce guard to prevent duplicate speech recognition events
+    if (now - lastExecutedTimeRef.current < 2000 && lastExecutedTextRef.current === cleanText) {
+      return;
+    }
+    lastExecutedTimeRef.current = now;
+    lastExecutedTextRef.current = cleanText;
+
     setTranscribedText(text);
     setLastAiResponse('');
     setStatusBadge(null);
