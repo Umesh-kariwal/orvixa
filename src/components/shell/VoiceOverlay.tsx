@@ -33,6 +33,8 @@ const EqualizerBars: React.FC<{ active: boolean; color: string }> = ({ active, c
   );
 };
 
+import { env } from '@/config/env';
+
 // ─────────────────────────────────────────────────────────────
 // VOICE OVERLAY — PRO LEVEL ULTRA UPGRADE
 // ─────────────────────────────────────────────────────────────
@@ -54,7 +56,7 @@ export const VoiceOverlay: React.FC = () => {
   const [lastAiResponse, setLastAiResponse] = useState('');
   const [statusBadge, setStatusBadge] = useState<string | null>(null);
   const [isMicMuted, setIsMicMuted] = useState(false);
-  const [activeYouTubeQuery, setActiveYouTubeQuery] = useState<string | null>(null);
+  const [activeYouTubeEmbedUrl, setActiveYouTubeEmbedUrl] = useState<string | null>(null);
   const [lastProcessedMsgCount, setLastProcessedMsgCount] = useState(conversationHistory.length);
   const submittedRef = useRef(false);
   const lastExecutedTimeRef = useRef<number>(0);
@@ -105,7 +107,14 @@ export const VoiceOverlay: React.FC = () => {
     // Desktop action
     if (cmd.type !== 'ai_chat') {
       if (cmd.type === 'play_on_youtube' && cmd.query) {
-        setActiveYouTubeQuery(cmd.query);
+        fetch(`${env.apiBaseUrl}/youtube/search?q=${encodeURIComponent(cmd.query)}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.embedUrl) {
+              setActiveYouTubeEmbedUrl(data.embedUrl);
+            }
+          })
+          .catch(() => {});
       }
       const responseText = await executeVoiceAction(cmd);
       if (responseText) {
@@ -368,7 +377,7 @@ export const VoiceOverlay: React.FC = () => {
           )}
 
           {/* In-App Pro YouTube Auto-Player Card */}
-          {activeYouTubeQuery && (
+          {activeYouTubeEmbedUrl && (
             <div style={{
               position: 'relative',
               width: '100%',
@@ -382,7 +391,7 @@ export const VoiceOverlay: React.FC = () => {
               background: '#000',
             }}>
               <button
-                onClick={() => setActiveYouTubeQuery(null)}
+                onClick={() => setActiveYouTubeEmbedUrl(null)}
                 style={{
                   position: 'absolute', top: '8px', right: '8px', zIndex: 20,
                   background: 'rgba(0,0,0,0.75)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '50%',
@@ -394,7 +403,7 @@ export const VoiceOverlay: React.FC = () => {
                 <X size={14} />
               </button>
               <iframe
-                src={`https://www.youtube-nocookie.com/embed?listType=search&list=${encodeURIComponent(activeYouTubeQuery)}&autoplay=1`}
+                src={activeYouTubeEmbedUrl}
                 style={{ width: '100%', height: '100%', border: 'none' }}
                 allow="autoplay; encrypted-media; fullscreen"
                 allowFullScreen

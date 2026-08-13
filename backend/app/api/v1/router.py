@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1 import copilot, health, context, stream, image, tts
+from app.api.v1 import copilot, health, context, stream, image, tts, youtube
 
 api_v1_router = APIRouter()
 
@@ -20,3 +20,6 @@ api_v1_router.include_router(image.router, prefix="/media", tags=["Image Generat
 
 # Register Gemini TTS (Text-to-Speech) endpoints
 api_v1_router.include_router(tts.router, prefix="/tts", tags=["Gemini TTS Engine"])
+
+# Register YouTube Video Resolver endpoints
+api_v1_router.include_router(youtube.router, prefix="/youtube", tags=["YouTube Engine"])
