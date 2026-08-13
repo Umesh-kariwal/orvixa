@@ -3,7 +3,29 @@ import { env } from '@/config/env';
 
 const TTS_URL = `${env.apiBaseUrl}/tts/synthesize`;
 
-// ─── Strip text for TTS ───────────────────────────────────────
+// ─── Module-level singleton to prevent zombie audio ────────────
+// This persists across React re-renders and component remounts
+let _globalAudio: HTMLAudioElement | null = null;
+let _globalRecognition: any = null;
+let _globalSessionId = 0; // increment on each new session to kill stale callbacks
+
+function killAllAudio() {
+  if (_globalAudio) {
+    _globalAudio.pause();
+    _globalAudio.src = '';
+    _globalAudio = null;
+  }
+  window.speechSynthesis?.cancel();
+}
+
+function killRecognition() {
+  if (_globalRecognition) {
+    try { _globalRecognition.abort(); } catch {}
+    _globalRecognition = null;
+  }
+}
+
+// ─── Clean text for TTS ───────────────────────────────────────
 function cleanTextForTTS(text: string): string {
   return text
     .replace(/```[\s\S]*?```/g, '')
@@ -22,72 +44,6 @@ function detectSinging(text: string): boolean {
     l.includes('la la la') || l.includes('sa re ga ma') || l.includes('verse') || l.includes('chorus');
 }
 
-// ─── Gemini TTS via Backend ───────────────────────────────────
-async function playGeminiTTS(
-  text: string,
-  isSinging: boolean,
-  onStart: () => void,
-  onEnd: () => void,
-  onError: () => void
-): Promise<HTMLAudioElement | null> {
-  const clean = cleanTextForTTS(text);
-  if (!clean) { onEnd(); return null; }
-
-  try {
-    const geminiKey = (() => {
-      try { return JSON.parse(localStorage.getItem('orvixa_system_settings') || '{}')?.geminiApiKey || null; }
-      catch { return null; }
-    })();
-
-    const res = await fetch(TTS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: clean, voice: 'Aoede', is_singing: isSinging, gemini_api_key: geminiKey }),
-    });
-
-    if (!res.ok || res.status === 204) throw new Error('TTS unavailable');
-
-    const audioBuffer = await res.arrayBuffer();
-    if (!audioBuffer || audioBuffer.byteLength === 0) throw new Error('Empty audio');
-
-    const blob = new Blob([audioBuffer], { type: 'audio/wav' });
-    const url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
-
-    audio.onplay = onStart;
-    audio.onended = () => { URL.revokeObjectURL(url); onEnd(); };
-    audio.onerror = () => { URL.revokeObjectURL(url); onError(); };
-
-    await audio.play();
-    return audio;
-  } catch {
-    onError();
-    return null;
-  }
-}
-
-// ─── Browser Fallback TTS ─────────────────────────────────────
-function browserSpeak(
-  text: string,
-  lang: string,
-  voice: SpeechSynthesisVoice | null,
-  onStart: () => void,
-  onEnd: () => void
-) {
-  const clean = cleanTextForTTS(text);
-  if (!clean) return;
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(clean);
-  u.lang = lang;
-  u.pitch = 1.05;
-  u.rate = 0.98;
-  if (voice) u.voice = voice;
-  u.onstart = onStart;
-  u.onend = onEnd;
-  u.onerror = onEnd;
-  window.speechSynthesis.speak(u);
-}
-
 // ─────────────────────────────────────────────────────────────
 export const useVoice = () => {
   const [isListening, setIsListening] = useState(false);
@@ -98,180 +54,255 @@ export const useVoice = () => {
   const [voiceLanguage, setVoiceLanguage] = useState<'en-US' | 'hi-IN'>(() =>
     (localStorage.getItem('orvixa_voice_language') as any) || 'en-US');
 
-  const recognitionRef = useRef<any>(null);
+  // Track our own session — stale sessions cannot play audio
+  const sessionIdRef = useRef(0);
   const listeningRef = useRef(false);
-  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const silenceTimerRef = useRef<any>(null);
   const interimTranscriptRef = useRef('');
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => { localStorage.setItem('orvixa_voice_enabled', String(voiceEnabled)); }, [voiceEnabled]);
   useEffect(() => { localStorage.setItem('orvixa_voice_language', voiceLanguage); }, [voiceLanguage]);
 
-  const selectBestVoice = useCallback((lang: string) => {
-    const voices = window.speechSynthesis.getVoices();
-    let pool = voices.filter(v => v.lang.toLowerCase().startsWith(lang.toLowerCase().slice(0, 2)));
-    let best = pool.find(v => v.name.includes('Google') && v.name.toLowerCase().includes('female'))
-      || pool.find(v => v.name.includes('Google'))
-      || pool.find(v => /zira|hazel|heera|kalpana|female|natural/i.test(v.name))
+  const selectBestVoice = useCallback((lang: string): SpeechSynthesisVoice | null => {
+    const voices = window.speechSynthesis?.getVoices() || [];
+    const pool = voices.filter(v => v.lang.toLowerCase().startsWith(lang.toLowerCase().slice(0, 2)));
+    return pool.find(v => /google/i.test(v.name) && /female/i.test(v.name))
+      || pool.find(v => /google/i.test(v.name))
+      || pool.find(v => /zira|heera|kalpana|natural/i.test(v.name))
       || pool[0] || null;
-    return best;
   }, []);
 
-  // ── CONTINUOUS LISTENING with 800ms silence auto-submit ───────
+  // ── SPEAK — kills ALL zombie audio first ─────────────────────
+  const speakText = useCallback(async (text: string) => {
+    if (!text) return;
+
+    // Kill any previous audio globally
+    killAllAudio();
+
+    // Cancel any in-flight TTS fetch
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    setIsSpeaking(false);
+
+    const clean = cleanTextForTTS(text);
+    if (!clean) return;
+
+    const isSinging = detectSinging(text);
+    const mySession = sessionIdRef.current; // capture — stale closures will have old value
+
+    // Attempt Gemini TTS
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    let usedGemini = false;
+    try {
+      const geminiKey = (() => {
+        try { return JSON.parse(localStorage.getItem('orvixa_system_settings') || '{}')?.geminiApiKey || null; }
+        catch { return null; }
+      })();
+
+      const res = await fetch(TTS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: clean, voice: 'Aoede', is_singing: isSinging, gemini_api_key: geminiKey }),
+        signal: controller.signal,
+      });
+
+      // Check if our session is still active
+      if (sessionIdRef.current !== mySession) return; // stale — abort silently
+
+      if (res.ok && res.status !== 204) {
+        const audioBuffer = await res.arrayBuffer();
+        if (sessionIdRef.current !== mySession) return;
+
+        if (audioBuffer && audioBuffer.byteLength > 0) {
+          const blob = new Blob([audioBuffer], { type: 'audio/wav' });
+          const url = URL.createObjectURL(blob);
+          const audio = new Audio(url);
+
+          audio.onplay = () => { if (sessionIdRef.current === mySession) setIsSpeaking(true); };
+          audio.onended = () => {
+            URL.revokeObjectURL(url);
+            if (_globalAudio === audio) _globalAudio = null;
+            if (sessionIdRef.current === mySession) setIsSpeaking(false);
+          };
+          audio.onerror = () => {
+            URL.revokeObjectURL(url);
+            if (_globalAudio === audio) _globalAudio = null;
+            if (sessionIdRef.current === mySession) setIsSpeaking(false);
+          };
+
+          // Kill any new audio that appeared while we were fetching
+          killAllAudio();
+          if (sessionIdRef.current !== mySession) return;
+
+          _globalAudio = audio;
+          await audio.play();
+          usedGemini = true;
+        }
+      }
+    } catch (e: any) {
+      if (e.name === 'AbortError') return; // intentionally cancelled
+    }
+
+    // Browser TTS fallback
+    if (!usedGemini && sessionIdRef.current === mySession) {
+      const voice = selectBestVoice(voiceLanguage);
+      const sentences = clean.match(/[^.!?\n]+[.!?\n]+/g) || [clean];
+      const shortText = sentences.slice(0, 2).join(' ').trim();
+
+      window.speechSynthesis?.cancel();
+      const u = new SpeechSynthesisUtterance(shortText || clean.slice(0, 300));
+      u.lang = voiceLanguage;
+      u.pitch = 1.05;
+      u.rate = 0.95;
+      if (voice) u.voice = voice;
+      u.onstart = () => { if (sessionIdRef.current === mySession) setIsSpeaking(true); };
+      u.onend = () => { if (sessionIdRef.current === mySession) setIsSpeaking(false); };
+      u.onerror = () => { if (sessionIdRef.current === mySession) setIsSpeaking(false); };
+      window.speechSynthesis?.speak(u);
+    }
+  }, [voiceLanguage, selectBestVoice]);
+
+  // ── INTERRUPT / STOP — global kill ───────────────────────────
+  const stopSpeaking = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    killAllAudio();
+    setIsSpeaking(false);
+  }, []);
+
+  const interruptSpeaking = stopSpeaking;
+
+  // ── CONTINUOUS LISTENING with 900ms silence detection ─────────
   const startListening = useCallback((onResult: (text: string) => void) => {
     if (listeningRef.current) return;
 
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) { alert('Speech recognition not supported.'); return; }
 
-    try {
-      setHasPermissionError(false);
+    setHasPermissionError(false);
+    listeningRef.current = true;
 
-      const rec = new SR();
-      rec.continuous = true;       // Keep listening continuously
-      rec.interimResults = true;   // Get partial results immediately
-      rec.lang = voiceLanguage;
+    const mySession = sessionIdRef.current;
 
-      recognitionRef.current = rec;
-      listeningRef.current = true;
+    const rec = new SR();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.lang = voiceLanguage;
+    rec.maxAlternatives = 1;
 
-      rec.onstart = () => setIsListening(true);
+    _globalRecognition = rec;
 
-      rec.onresult = (event: any) => {
-        let interimText = '';
-        let finalText = '';
+    rec.onstart = () => {
+      if (sessionIdRef.current === mySession) setIsListening(true);
+    };
 
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const t = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            finalText += t;
-          } else {
-            interimText += t;
-          }
-        }
+    rec.onresult = (event: any) => {
+      if (sessionIdRef.current !== mySession) return; // stale session — ignore
 
-        // Update interim ref so we can grab it on silence timeout
-        if (interimText) interimTranscriptRef.current = interimText;
+      let interimText = '';
+      let finalText = '';
 
-        // Clear existing silence timer and reset it
-        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-
-        if (finalText.trim()) {
-          // Final result from browser — submit immediately
-          interimTranscriptRef.current = '';
-          clearTimeout(silenceTimerRef.current);
-          onResult(finalText.trim());
-        } else if (interimText.trim()) {
-          // Still speaking — wait 900ms of silence then auto-submit
-          silenceTimerRef.current = setTimeout(() => {
-            const toSubmit = interimTranscriptRef.current.trim();
-            if (toSubmit) {
-              interimTranscriptRef.current = '';
-              onResult(toSubmit);
-            }
-          }, 900);
-        }
-      };
-
-      rec.onerror = (e: any) => {
-        setIsListening(false);
-        listeningRef.current = false;
-        if (e.error === 'not-allowed') setHasPermissionError(true);
-        // Auto-restart on non-fatal errors
-        if (e.error !== 'not-allowed' && e.error !== 'aborted') {
-          setTimeout(() => {
-            if (!listeningRef.current) startListening(onResult);
-          }, 300);
-        }
-      };
-
-      rec.onend = () => {
-        // Auto-restart for continuous listening
-        if (listeningRef.current) {
-          try { rec.start(); } catch {}
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const t = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalText += t;
         } else {
-          setIsListening(false);
+          interimText += t;
         }
-      };
+      }
 
-      rec.start();
-    } catch (err) {
-      setIsListening(false);
-      listeningRef.current = false;
-    }
+      if (finalText.trim()) {
+        clearTimeout(silenceTimerRef.current);
+        interimTranscriptRef.current = '';
+        onResult(finalText.trim());
+      } else if (interimText.trim()) {
+        interimTranscriptRef.current = interimText;
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = setTimeout(() => {
+          const toSubmit = interimTranscriptRef.current.trim();
+          if (toSubmit && sessionIdRef.current === mySession) {
+            interimTranscriptRef.current = '';
+            onResult(toSubmit);
+          }
+        }, 900);
+      }
+    };
+
+    rec.onerror = (e: any) => {
+      if (e.error === 'not-allowed') {
+        setHasPermissionError(true);
+        listeningRef.current = false;
+        setIsListening(false);
+        return;
+      }
+      // Auto-restart on network/no-speech errors (only if session still active)
+      if (listeningRef.current && sessionIdRef.current === mySession && e.error !== 'aborted') {
+        setTimeout(() => {
+          if (listeningRef.current && sessionIdRef.current === mySession) {
+            try { rec.start(); } catch {}
+          }
+        }, 400);
+      }
+    };
+
+    rec.onend = () => {
+      // Auto-restart for continuous mode — only if our session is still active
+      if (listeningRef.current && sessionIdRef.current === mySession) {
+        try { rec.start(); } catch {}
+      } else {
+        setIsListening(false);
+      }
+    };
+
+    try { rec.start(); } catch {}
   }, [voiceLanguage]);
 
   const stopListening = useCallback(() => {
     listeningRef.current = false;
-    if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); }
+    clearTimeout(silenceTimerRef.current);
     interimTranscriptRef.current = '';
-    if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch {}
-      recognitionRef.current = null;
-    }
+    killRecognition();
     setIsListening(false);
   }, []);
 
-  // ── SPEAK — stops current audio if interrupted ────────────────
-  const speakText = useCallback(async (text: string) => {
-    if (!text) return;
-
-    // Stop any existing speech immediately
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current = null;
-    }
-    window.speechSynthesis.cancel();
+  // ── NEW SESSION — call this when voice mode opens ─────────────
+  const startNewSession = useCallback(() => {
+    _globalSessionId++;
+    sessionIdRef.current = _globalSessionId;
+    killAllAudio();
+    killRecognition();
     setIsSpeaking(false);
-
-    const isSinging = detectSinging(text);
-    const audio = await playGeminiTTS(
-      text,
-      isSinging,
-      () => setIsSpeaking(true),
-      () => { setIsSpeaking(false); currentAudioRef.current = null; },
-      () => {
-        // Fallback to browser TTS
-        const voice = selectBestVoice(voiceLanguage);
-        const sentences = text.match(/[^.!?\n]+[.!?\n]+/g) || [text];
-        const shortText = sentences.slice(0, 2).join(' ').trim();
-        browserSpeak(shortText || text.slice(0, 300), voiceLanguage, voice,
-          () => setIsSpeaking(true),
-          () => setIsSpeaking(false)
-        );
-      }
-    );
-
-    if (audio) {
-      currentAudioRef.current = audio;
-    }
-  }, [voiceLanguage, selectBestVoice]);
-
-  // ── INTERRUPT — stop audio mid-playback ──────────────────────
-  const interruptSpeaking = useCallback(() => {
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current.src = '';
-      currentAudioRef.current = null;
-    }
-    window.speechSynthesis.cancel();
-    setIsSpeaking(false);
+    setIsListening(false);
   }, []);
 
-  const stopSpeaking = useCallback(() => {
-    interruptSpeaking();
-  }, [interruptSpeaking]);
+  // ── FULL CLEANUP — call this when voice mode closes ───────────
+  const fullCleanup = useCallback(() => {
+    listeningRef.current = false;
+    clearTimeout(silenceTimerRef.current);
+    interimTranscriptRef.current = '';
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    killAllAudio();
+    killRecognition();
+    setIsSpeaking(false);
+    setIsListening(false);
+  }, []);
 
   return {
-    isListening,
-    isSpeaking,
-    hasPermissionError,
+    isListening, isSpeaking, hasPermissionError,
     voiceEnabled, setVoiceEnabled,
     voiceLanguage, setVoiceLanguage,
-    startListening,
-    stopListening,
-    speakText,
-    stopSpeaking,
-    interruptSpeaking,
+    startListening, stopListening,
+    speakText, stopSpeaking, interruptSpeaking,
+    startNewSession, fullCleanup,
   };
 };
