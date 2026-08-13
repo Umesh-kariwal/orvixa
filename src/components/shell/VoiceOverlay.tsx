@@ -4,9 +4,8 @@ import { useVoice } from '@/hooks/useVoice';
 import { Button } from '@/components/ui/Button';
 import { X, Mic, MicOff, Volume2, AudioLines, ExternalLink, Play, Search, Globe, FileText, ArrowDown, Sparkles, Square } from 'lucide-react';
 import {
-  parseVoiceCommand,
-  executeVoiceAction,
-  getCurrentPageContent,
+  parseVoiceCommand, executeVoiceAction, getCurrentPageContent,
+  buildAutonomousPlan, executeAutonomousPlan, type AutonomousTaskPlan
 } from '@/hooks/desktopActions';
 
 // ─────────────────────────────────────────────────────────────
@@ -50,6 +49,7 @@ export const VoiceOverlay: React.FC = () => {
   } = useVoice();
 
   const [voiceState, setVoiceState] = useState<'idle' | 'listening' | 'thinking' | 'speaking'>('idle');
+  const [activeAutonomousPlan, setActiveAutonomousPlan] = useState<AutonomousTaskPlan | null>(null);
   const [transcribedText, setTranscribedText] = useState('');
   const [lastAiResponse, setLastAiResponse] = useState('');
   const [statusBadge, setStatusBadge] = useState<string | null>(null);
@@ -75,8 +75,23 @@ export const VoiceOverlay: React.FC = () => {
     setTranscribedText(text);
     setLastAiResponse('');
     setStatusBadge(null);
+    setActiveAutonomousPlan(null);
     submittedRef.current = true;
     setVoiceState('thinking');
+
+    // Check for Multi-Step Autonomous Agent Plan
+    const plan = buildAutonomousPlan(text);
+    if (plan) {
+      setLastAiResponse('');
+      setActiveAutonomousPlan(plan);
+      speakText(`Starting autonomous task: ${plan.goal}`);
+      const summary = await executeAutonomousPlan(plan, (updated) => {
+        setActiveAutonomousPlan({ ...updated });
+      });
+      setStatusBadge(summary);
+      speakText(summary);
+      return;
+    }
 
     const cmd = parseVoiceCommand(text);
 
@@ -361,6 +376,41 @@ export const VoiceOverlay: React.FC = () => {
             }}>
               <ExternalLink size={14} style={{ color: '#818cf8' }} />
               {statusBadge}
+            </div>
+          )}
+
+          {/* Autonomous Multi-Step Agent Plan HUD Card */}
+          {activeAutonomousPlan && (
+            <div style={{
+              background: 'rgba(15, 23, 42, 0.85)',
+              backdropFilter: 'blur(16px)',
+              border: '1px solid rgba(99, 102, 241, 0.35)',
+              borderRadius: '16px',
+              padding: '14px 20px',
+              width: '100%',
+              maxWidth: '520px',
+              boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+              marginTop: '8px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', fontWeight: 600, color: '#818cf8' }}>
+                <Sparkles size={16} />
+                <span>Autonomous Workflow: {activeAutonomousPlan.goal}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {activeAutonomousPlan.steps.map(step => (
+                  <div key={step.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.82rem', color: step.status === 'completed' ? '#34d399' : step.status === 'in_progress' ? '#fbbf24' : '#94a3b8' }}>
+                    <span style={{ fontWeight: 700 }}>
+                      {step.status === 'completed' ? '✓' : step.status === 'in_progress' ? '⚡' : '○'}
+                    </span>
+                    <span style={{ textDecoration: step.status === 'completed' ? 'line-through' : 'none' }}>
+                      {step.title}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
