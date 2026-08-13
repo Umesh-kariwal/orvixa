@@ -89,13 +89,23 @@ class GoogleGeminiProvider(BaseAIProvider):
             user_question=prompt_text or intent_type,
         )
 
-        if active_client and resolved_key:
-            try:
+        config = None
+        if is_voice_chat:
+          sys_instruct = (
+              "You are Orvixa in live voice mode. "
+              "ULTRA IMPORTANT RULE: Keep your response EXTREMELY SHORT (maximum 1 to 2 short sentences, under 25 words). "
+              "Be direct, warm, and conversational. NO long explanations, NO bullet points, NO code, NO markdown (*, #, `). "
+              "If asked to sing, output 2-3 real song lines with 🎵 emojis."
+          )
+          config = types.GenerateContentConfig(system_instruction=sys_instruct)
 
-                response = active_client.models.generate_content_stream(
-                    model=self._model,
-                    contents=full_prompt,
-                )
+        if active_client and resolved_key:
+          try:
+            response = active_client.models.generate_content_stream(
+                model=self._model,
+                contents=full_prompt,
+                config=config,
+            )
                 for chunk in response:
                     if first_token_time is None:
                         first_token_time = time.time()

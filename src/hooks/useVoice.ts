@@ -93,9 +93,34 @@ export const useVoice = () => {
     const isSinging = detectSinging(text);
     const mySession = sessionIdRef.current; // capture — stale closures will have old value
 
-    // Attempt Gemini TTS
+    // For standard voice responses, use instant local Browser SpeechSynthesis (0ms network delay!)
+    // For singing or explicitly requested custom voices, attempt Gemini TTS with 500ms race timeout
+    if (!isSinging) {
+      const voice = selectBestVoice(voiceLanguage);
+      const sentences = clean.match(/[^.!?\n]+[.!?\n]+/g) || [clean];
+      const shortText = sentences.slice(0, 2).join(' ').trim();
+
+      window.speechSynthesis?.cancel();
+      const u = new SpeechSynthesisUtterance(shortText || clean.slice(0, 250));
+      u.lang = voiceLanguage;
+      u.pitch = 1.08;
+      u.rate = 1.05;
+      if (voice) u.voice = voice;
+      u.onstart = () => { if (sessionIdRef.current === mySession) setIsSpeaking(true); };
+      u.onend = () => { if (sessionIdRef.current === mySession) setIsSpeaking(false); };
+      u.onerror = () => { if (sessionIdRef.current === mySession) setIsSpeaking(false); };
+      window.speechSynthesis?.speak(u);
+      return;
+    }
+
+    // Attempt Gemini TTS for singing / special requests
     const controller = new AbortController();
     abortControllerRef.current = controller;
+
+    // 500ms race timeout
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, 600);
 
     let usedGemini = false;
     try {
@@ -111,8 +136,10 @@ export const useVoice = () => {
         signal: controller.signal,
       });
 
+      clearTimeout(timeoutId);
+
       // Check if our session is still active
-      if (sessionIdRef.current !== mySession) return; // stale — abort silently
+      if (sessionIdRef.current !== mySession) return;
 
       if (res.ok && res.status !== 204) {
         const audioBuffer = await res.arrayBuffer();
@@ -135,7 +162,6 @@ export const useVoice = () => {
             if (sessionIdRef.current === mySession) setIsSpeaking(false);
           };
 
-          // Kill any new audio that appeared while we were fetching
           killAllAudio();
           if (sessionIdRef.current !== mySession) return;
 
@@ -145,7 +171,10 @@ export const useVoice = () => {
         }
       }
     } catch (e: any) {
-      if (e.name === 'AbortError') return; // intentionally cancelled
+      clearTimeout(timeoutId);
+      if (e.name === 'AbortError') {
+        // Timed out or cancelled — proceed to fallback
+      }
     }
 
     // Browser TTS fallback
@@ -155,10 +184,10 @@ export const useVoice = () => {
       const shortText = sentences.slice(0, 2).join(' ').trim();
 
       window.speechSynthesis?.cancel();
-      const u = new SpeechSynthesisUtterance(shortText || clean.slice(0, 300));
+      const u = new SpeechSynthesisUtterance(shortText || clean.slice(0, 250));
       u.lang = voiceLanguage;
-      u.pitch = 1.05;
-      u.rate = 0.95;
+      u.pitch = 1.08;
+      u.rate = 1.05;
       if (voice) u.voice = voice;
       u.onstart = () => { if (sessionIdRef.current === mySession) setIsSpeaking(true); };
       u.onend = () => { if (sessionIdRef.current === mySession) setIsSpeaking(false); };
@@ -231,7 +260,7 @@ export const useVoice = () => {
             interimTranscriptRef.current = '';
             onResult(toSubmit);
           }
-        }, 450);
+        }, 250);
       }
     };
 
