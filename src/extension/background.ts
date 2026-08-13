@@ -97,34 +97,68 @@ chrome.runtime.onMessage.addListener((request: any, _sender: any, sendResponse: 
   // ─────────────────────────────────────────────────────────
   // AUTONOMOUS AGENT: YouTube Search + Auto-Click 1st Video
   // ─────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────
+  // AUTONOMOUS AGENT: YouTube Search + Auto-Play 1st Video
+  // ─────────────────────────────────────────────────────────
   if (request.type === 'ORVIXA_AUTONOMOUS_YOUTUBE_PLAY') {
-    const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(request.query)}`;
+    // Filter &sp=EgIQAQ%253D%253D forces Video-only search results
+    const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(request.query)}&sp=EgIQAQ%253D%253D`;
     chrome.tabs.create({ url: searchUrl, active: true }, (tab: any) => {
-      // Listen for tab completion to auto-click 1st video
-      const listener = (tabId: number, changeInfo: any) => {
-        if (tabId === tab.id && changeInfo.status === 'complete') {
-          chrome.tabs.onUpdated.removeListener(listener);
-          // Inject script to click 1st video and skip ads
-          chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            func: () => {
-              const tryClickVideo = () => {
-                const videoLink = document.querySelector('ytd-video-renderer a#video-title, a.ytd-thumbnail') as HTMLAnchorElement;
-                if (videoLink) {
-                  videoLink.click();
-                  return true;
-                }
-                return false;
-              };
-              if (!tryClickVideo()) {
-                setTimeout(tryClickVideo, 1200);
-                setTimeout(tryClickVideo, 2500);
+      
+      const injectAutoPlayScript = (tabId: number) => {
+        chrome.scripting.executeScript({
+          target: { tabId },
+          func: () => {
+            let attempts = 0;
+            const maxAttempts = 25; // Try for up to 7.5 seconds
+            
+            const checkAndPlay = () => {
+              attempts++;
+              // Robust YouTube selectors for video links
+              const videoLinks = Array.from(document.querySelectorAll(
+                'ytd-video-renderer a#video-title, a#video-title, ytd-search a[href^="/watch?v="], a.ytd-thumbnail[href^="/watch?v="]'
+              )) as HTMLAnchorElement[];
+
+              const targetLink = videoLinks.find(a => a.href && a.href.includes('/watch?v='));
+
+              if (targetLink && targetLink.href) {
+                // Direct window navigation guarantees playing the video immediately!
+                window.location.href = targetLink.href;
+                return true;
               }
-            },
-          });
+
+              if (attempts < maxAttempts) {
+                setTimeout(checkAndPlay, 300);
+              }
+              return false;
+            };
+
+            // Start polling immediately
+            checkAndPlay();
+
+            // Also observe DOM mutations for dynamic SPA render
+            const observer = new MutationObserver(() => {
+              if (checkAndPlay()) {
+                observer.disconnect();
+              }
+            });
+            if (document.body) {
+              observer.observe(document.body, { childList: true, subtree: true });
+            }
+          },
+        });
+      };
+
+      const listener = (tabId: number, changeInfo: any) => {
+        if (tabId === tab.id && (changeInfo.status === 'loading' || changeInfo.status === 'complete')) {
+          injectAutoPlayScript(tab.id);
+          if (changeInfo.status === 'complete') {
+            chrome.tabs.onUpdated.removeListener(listener);
+          }
         }
       };
       chrome.tabs.onUpdated.addListener(listener);
+
       sendResponse({ status: 'ok', tabId: tab.id });
     });
     return true;
