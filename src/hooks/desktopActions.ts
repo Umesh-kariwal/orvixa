@@ -1,25 +1,8 @@
 /**
- * Orvixa Desktop Actions — Real Autonomous Browser & Native App Automation Engine
- * Fixed intent evaluation hierarchy to prioritize specialized auto-play agents over generic search.
+ * Orvixa Automation Engine — Zero-Friction Web & Desktop App Automation
+ * Native OS Protocol Launchers (Spotify, WhatsApp, Email), Hardware Media Keys,
+ * and Instant Search & Navigation Agents without any manual extension setup.
  */
-
-declare const chrome: any;
-
-const IS_EXTENSION = typeof chrome !== 'undefined' && !!chrome?.runtime?.sendMessage;
-
-function bgMessage(msg: object): Promise<any> {
-  return new Promise((resolve) => {
-    if (!IS_EXTENSION) { resolve(null); return; }
-    try {
-      chrome.runtime.sendMessage(msg, (response: any) => {
-        chrome.runtime.lastError; // consume error safely
-        resolve(response);
-      });
-    } catch {
-      resolve(null);
-    }
-  });
-}
 
 // ─────────────────────────────────────────────────────────────
 // NATIVE APP + WEB FALLBACK LAUNCHER
@@ -42,26 +25,17 @@ export async function openNativeAppOrWeb(nativeUri: string, webFallbackUrl: stri
 }
 
 export async function openUrl(url: string): Promise<void> {
-  if (IS_EXTENSION) {
-    await bgMessage({ type: 'ORVIXA_OPEN_URL', url });
-  } else {
-    try {
-      const win = window.open(url, '_blank');
-      if (!win || win.closed || typeof win.closed === 'undefined') {
-        // Popup was blocked by browser — navigate directly in current window!
-        window.location.href = url;
-      }
-    } catch {
+  try {
+    const win = window.open(url, '_blank');
+    if (!win || win.closed || typeof win.closed === 'undefined') {
       window.location.href = url;
     }
+  } catch {
+    window.location.href = url;
   }
 }
 
 export async function getCurrentPageContent(): Promise<{ title: string; url: string; content: string }> {
-  if (IS_EXTENSION) {
-    const res = await bgMessage({ type: 'ORVIXA_GET_PAGE_CONTENT' });
-    return res || { title: '', url: '', content: '' };
-  }
   return {
     title: document.title,
     url: window.location.href,
@@ -70,19 +44,11 @@ export async function getCurrentPageContent(): Promise<{ title: string; url: str
 }
 
 export async function scrollPage(direction: 'down' | 'up'): Promise<void> {
-  if (IS_EXTENSION) {
-    await bgMessage({ type: 'ORVIXA_SCROLL', direction });
-  } else {
-    window.scrollBy({ top: direction === 'down' ? 500 : -500, behavior: 'smooth' });
-  }
+  window.scrollBy({ top: direction === 'down' ? 500 : -500, behavior: 'smooth' });
 }
 
-export async function focusOrOpenSite(pattern: string, url: string): Promise<void> {
-  if (IS_EXTENSION) {
-    await bgMessage({ type: 'ORVIXA_FOCUS_TAB', pattern, fallbackUrl: url });
-  } else {
-    await openUrl(url);
-  }
+export async function focusOrOpenSite(_pattern: string, url: string): Promise<void> {
+  await openUrl(url);
 }
 
 export function triggerMediaControl(action: 'next' | 'previous' | 'pause' | 'play'): void {
@@ -103,24 +69,33 @@ export function triggerMediaControl(action: 'next' | 'previous' | 'pause' | 'pla
 }
 
 export async function autoPlayYouTubeVideo(songQuery: string): Promise<void> {
-  if (IS_EXTENSION) {
-    await bgMessage({ type: 'ORVIXA_AUTONOMOUS_YOUTUBE_PLAY', query: songQuery });
-  } else {
-    // Official Video-filtered YouTube Search URL
-    await openUrl(`https://www.youtube.com/results?search_query=${encodeURIComponent(songQuery)}&sp=EgIQAQ%253D%253D`);
-  }
+  await openUrl(`https://www.youtube.com/results?search_query=${encodeURIComponent(songQuery)}&sp=EgIQAQ%253D%253D`);
 }
 
 export async function autoClickElementByText(text: string): Promise<any> {
-  if (IS_EXTENSION) {
-    return await bgMessage({ type: 'ORVIXA_AUTO_CLICK_TEXT', text });
+  const lower = text.toLowerCase();
+  const clickable = Array.from(document.querySelectorAll('button, a, input[type="submit"], [role="button"]'));
+  const match = clickable.find(el => (el as HTMLElement).innerText?.toLowerCase().includes(lower)) as HTMLElement;
+  if (match) {
+    match.click();
+    return { clicked: true, text: match.innerText };
   }
   return { clicked: false };
 }
 
 export async function autoFillActiveInput(value: string): Promise<any> {
-  if (IS_EXTENSION) {
-    return await bgMessage({ type: 'ORVIXA_AUTO_FILL_INPUT', value });
+  const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"]), textarea, [contenteditable="true"]')) as HTMLElement[];
+  if (inputs.length > 0) {
+    const target = inputs[0];
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+      (target as HTMLInputElement).value = value;
+      target.dispatchEvent(new Event('input', { bubbles: true }));
+      target.dispatchEvent(new Event('change', { bubbles: true }));
+    } else {
+      target.innerText = value;
+      target.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    return { filled: true };
   }
   return { filled: false };
 }
@@ -194,7 +169,7 @@ export function parseVoiceCommand(text: string): VoiceAction {
     return { type: 'media_play', response: 'Music playing!' };
   }
 
-  // ── 3. YOUTUBE SEARCH & AUTO-PLAY (TOP PRIORITY BEFORE GENERIC SITE SEARCH) ──
+  // ── 3. YOUTUBE SEARCH & PLAY ──────────────────────────────
   if (t.includes('youtube') || /\b(play|bajao|chalao|sunao|lagao|gao)\b/.test(t)) {
     const isYtExplicit = t.includes('youtube') || t.includes('yt');
     const isPlayCmd = /\b(play|bajao|chalao|sunao|lagao|gao|search|dhundo)\b/.test(t);
@@ -457,7 +432,7 @@ export async function executeVoiceAction(action: VoiceAction): Promise<string | 
       if (action.nativeUri && action.siteUrl) {
         await openNativeAppOrWeb(action.nativeUri, action.siteUrl);
       } else if (action.siteUrl) {
-        await focusOrOpenSite(action.siteUrl, action.siteUrl);
+        await openUrl(action.siteUrl);
       }
       return action.response || null;
 
@@ -472,7 +447,7 @@ export async function executeVoiceAction(action: VoiceAction): Promise<string | 
       if (action.nativeUri && action.siteUrl) {
         await openNativeAppOrWeb(action.nativeUri, action.siteUrl);
       } else if (action.siteUrl) {
-        await focusOrOpenSite(action.siteUrl, action.siteUrl);
+        await openUrl(action.siteUrl);
       }
       return action.response || null;
 
@@ -501,7 +476,7 @@ export async function executeVoiceAction(action: VoiceAction): Promise<string | 
       if (action.nativeUri && action.siteUrl) {
         await openNativeAppOrWeb(action.nativeUri, action.siteUrl);
       } else if (action.siteUrl) {
-        await focusOrOpenSite(action.siteUrl, action.siteUrl);
+        await openUrl(action.siteUrl);
       }
       return action.response || null;
 
