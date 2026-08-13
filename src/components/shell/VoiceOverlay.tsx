@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useSidePanel } from '@/hooks/useSidePanel';
 import { useVoice } from '@/hooks/useVoice';
 import { Button } from '@/components/ui/Button';
-import { X, Mic, MicOff, Volume2, AudioLines, ExternalLink, Play, Search, Globe, FileText, ArrowDown, ShoppingCart, Sparkles, Square } from 'lucide-react';
+import { X, Mic, MicOff, Volume2, AudioLines, ExternalLink, Play, Search, Globe, FileText, ArrowDown, Sparkles, Square } from 'lucide-react';
 import {
   parseVoiceCommand,
   executeVoiceAction,
@@ -355,12 +355,12 @@ export const VoiceOverlay: React.FC = () => {
         {/* Pro Quick Action Pills */}
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center', maxWidth: '580px' }}>
           {[
-            { icon: <Play size={11} />, label: 'Play Song Auto', prompt: 'Kesariya song bajao' },
-            { icon: <Globe size={11} />, label: 'WhatsApp Message', prompt: 'WhatsApp pe message karo Hello' },
+            { icon: <Play size={11} />, label: 'Spotify Play', prompt: 'play All Black song on spotify' },
+            { icon: <Play size={11} />, label: 'Next Song', prompt: 'Next song change karo' },
+            { icon: <Globe size={11} />, label: 'WhatsApp Msg', prompt: 'WhatsApp pe message karo Hello' },
             { icon: <Search size={11} />, label: 'Click Button', prompt: 'Click on Login' },
             { icon: <FileText size={11} />, label: 'Page Summarize', prompt: 'Is page ko summarize karo' },
-            { icon: <ArrowDown size={11} />, label: 'Scroll Down', prompt: 'Scroll down karo' },
-            { icon: <ShoppingCart size={11} />, label: 'Email Compose', prompt: 'Email compose karo Project Report' },
+            { icon: <ArrowDown size={11} />, label: 'YouTube Auto', prompt: 'Chaiyya Chaiyya song bajao' },
           ].map((pill) => (
             <button
               key={pill.label}
