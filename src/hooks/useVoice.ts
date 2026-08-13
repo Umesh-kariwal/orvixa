@@ -66,11 +66,23 @@ export const useVoice = () => {
 
   const selectBestVoice = useCallback((lang: string): SpeechSynthesisVoice | null => {
     const voices = window.speechSynthesis?.getVoices() || [];
-    const pool = voices.filter(v => v.lang.toLowerCase().startsWith(lang.toLowerCase().slice(0, 2)));
-    return pool.find(v => /google/i.test(v.name) && /female/i.test(v.name))
-      || pool.find(v => /google/i.test(v.name))
-      || pool.find(v => /zira|heera|kalpana|natural/i.test(v.name))
-      || pool[0] || null;
+    if (!voices.length) return null;
+
+    const isHindi = lang.toLowerCase().includes('hi');
+
+    if (isHindi) {
+      return voices.find(v => /google\s+हिन्दी|google\s+hindi/i.test(v.name))
+        || voices.find(v => /swara|heera|kalpana/i.test(v.name) && v.lang.toLowerCase().includes('hi'))
+        || voices.find(v => v.lang.toLowerCase().includes('hi'))
+        || voices.find(v => /india/i.test(v.name))
+        || voices[0];
+    }
+
+    return voices.find(v => /google\s+us\s+english/i.test(v.name))
+      || voices.find(v => /jenny|natural|zira|aria|hazel/i.test(v.name) && v.lang.toLowerCase().includes('en'))
+      || voices.find(v => /google/i.test(v.name) && v.lang.toLowerCase().includes('en'))
+      || voices.find(v => v.lang.toLowerCase().includes('en'))
+      || voices[0];
   }, []);
 
   // ── SPEAK — kills ALL zombie audio first ─────────────────────
@@ -94,7 +106,6 @@ export const useVoice = () => {
     const mySession = sessionIdRef.current; // capture — stale closures will have old value
 
     // For standard voice responses, use instant local Browser SpeechSynthesis (0ms network delay!)
-    // For singing or explicitly requested custom voices, attempt Gemini TTS with 500ms race timeout
     if (!isSinging) {
       const voice = selectBestVoice(voiceLanguage);
       const sentences = clean.match(/[^.!?\n]+[.!?\n]+/g) || [clean];
@@ -103,8 +114,8 @@ export const useVoice = () => {
       window.speechSynthesis?.cancel();
       const u = new SpeechSynthesisUtterance(shortText || clean.slice(0, 250));
       u.lang = voiceLanguage;
-      u.pitch = 1.08;
-      u.rate = 1.05;
+      u.pitch = 1.0;  // 100% natural human pitch
+      u.rate = 1.0;   // 100% natural human speaking rate
       if (voice) u.voice = voice;
       u.onstart = () => { if (sessionIdRef.current === mySession) setIsSpeaking(true); };
       u.onend = () => { if (sessionIdRef.current === mySession) setIsSpeaking(false); };

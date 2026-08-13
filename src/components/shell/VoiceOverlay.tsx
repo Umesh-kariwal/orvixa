@@ -2,13 +2,39 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useSidePanel } from '@/hooks/useSidePanel';
 import { useVoice } from '@/hooks/useVoice';
 import { Button } from '@/components/ui/Button';
-import { X, Mic, Volume2, AudioLines, ExternalLink } from 'lucide-react';
+import { X, Mic, MicOff, Volume2, AudioLines, ExternalLink, Play, Search, Globe, FileText, ArrowDown, ShoppingCart, Sparkles, Square } from 'lucide-react';
 import {
   parseVoiceCommand,
   executeVoiceAction,
   getCurrentPageContent,
 } from '@/hooks/desktopActions';
 
+// ─────────────────────────────────────────────────────────────
+// PRO AUDIO EQUALIZER BARS (Visualizer component)
+// ─────────────────────────────────────────────────────────────
+const EqualizerBars: React.FC<{ active: boolean; color: string }> = ({ active, color }) => {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '3px', height: '24px' }}>
+      {[0.4, 0.8, 1.0, 0.6, 0.9, 0.5, 0.7].map((heightScale, i) => (
+        <div
+          key={i}
+          style={{
+            width: '3px',
+            height: active ? `${heightScale * 22}px` : '4px',
+            backgroundColor: color,
+            borderRadius: '4px',
+            transition: 'height 0.15s ease',
+            animation: active ? `equalizerBounce 0.6s ease-in-out infinite alternate` : 'none',
+            animationDelay: `${i * 0.08}s`,
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────
+// VOICE OVERLAY — PRO LEVEL ULTRA UPGRADE
 // ─────────────────────────────────────────────────────────────
 export const VoiceOverlay: React.FC = () => {
   const {
@@ -17,7 +43,7 @@ export const VoiceOverlay: React.FC = () => {
   } = useSidePanel();
 
   const {
-    isSpeaking, startListening,
+    isSpeaking, startListening, stopListening,
     speakText, interruptSpeaking,
     startNewSession, fullCleanup,
     voiceLanguage, setVoiceLanguage, hasPermissionError,
@@ -25,42 +51,45 @@ export const VoiceOverlay: React.FC = () => {
 
   const [voiceState, setVoiceState] = useState<'idle' | 'listening' | 'thinking' | 'speaking'>('idle');
   const [transcribedText, setTranscribedText] = useState('');
+  const [lastAiResponse, setLastAiResponse] = useState('');
   const [statusBadge, setStatusBadge] = useState<string | null>(null);
+  const [isMicMuted, setIsMicMuted] = useState(false);
   const [lastProcessedMsgCount, setLastProcessedMsgCount] = useState(conversationHistory.length);
-  const submittedRef = useRef(false); // instant flag when speech submitted
+  const submittedRef = useRef(false);
 
   // ── HANDLE USER SPEECH ───────────────────────────────────────
   const handleUserSpeech = useCallback(async (text: string) => {
-    if (!text.trim()) return;
+    if (!text.trim() || isMicMuted) return;
     setTranscribedText(text);
+    setLastAiResponse('');
     setStatusBadge(null);
-    submittedRef.current = true;       // ← instant: switch state before thinkingStep updates
-    setVoiceState('thinking');         // ← show "Soch raha hoon" immediately
+    submittedRef.current = true;
+    setVoiceState('thinking');
 
     const cmd = parseVoiceCommand(text);
 
-    // Always interrupt AI mid-sentence
+    // Interrupt AI mid-sentence
     interruptSpeaking();
 
-    // ── Close ──────────────────────────────────────────────
+    // Close
     if (cmd.type === 'close_voice') {
-      speakText('Band kar raha hoon. Phir milte hain!');
-      setTimeout(handleClose, 1500);
+      speakText('Voice Mode closed.');
+      setTimeout(handleClose, 1000);
       return;
     }
 
-    // ── Page summarize (needs AI with page content) ─────────
+    // Page summarize
     if (cmd.type === 'summarize_page' || cmd.type === 'read_page') {
-      speakText('Is page ka content padh raha hoon...');
+      speakText('Reading page content...');
       const page = await getCurrentPageContent();
       const prompt = page.content
-        ? `Summarize this webpage in 3 bullet points in simple Hindi-English mix. Page title: "${page.title}". Content: ${page.content.slice(0, 4000)}`
-        : 'No page content found. Please navigate to a webpage first.';
+        ? `Summarize this webpage in 3 clear bullet points in simple Hindi-English mix. Page title: "${page.title}". Content: ${page.content.slice(0, 4000)}`
+        : 'No webpage content found. Please navigate to a webpage first.';
       executeAction({ action_id: 'voice_chat', label: 'Voice Chat', description: prompt, icon: 'sparkles' });
       return;
     }
 
-    // ── Desktop action ──────────────────────────────────────
+    // Desktop action
     if (cmd.type !== 'ai_chat') {
       const responseText = await executeVoiceAction(cmd);
       if (responseText) {
@@ -70,9 +99,9 @@ export const VoiceOverlay: React.FC = () => {
       return;
     }
 
-    // ── AI Chat ─────────────────────────────────────────────
+    // Send to AI
     executeAction({ action_id: 'voice_chat', label: 'Voice Chat', description: text, icon: 'sparkles' });
-  }, [interruptSpeaking, speakText, executeAction]);
+  }, [isMicMuted, interruptSpeaking, speakText, executeAction]);
 
   // ── SESSION START ─────────────────────────────────────────
   useEffect(() => {
@@ -82,7 +111,9 @@ export const VoiceOverlay: React.FC = () => {
     submittedRef.current = false;
     setVoiceState('listening');
     setTranscribedText('');
+    setLastAiResponse('');
     setStatusBadge(null);
+    setIsMicMuted(false);
     setLastProcessedMsgCount(conversationHistory.length);
 
     const t = setTimeout(() => startListening(handleUserSpeech), 200);
@@ -100,7 +131,6 @@ export const VoiceOverlay: React.FC = () => {
       submittedRef.current = false;
       setVoiceState('speaking');
     } else if (!submittedRef.current) {
-      // Only go back to listening if we haven't just submitted
       setVoiceState('listening');
     }
   }, [thinkingStep, isSpeaking, isVoiceModeActive]);
@@ -113,8 +143,9 @@ export const VoiceOverlay: React.FC = () => {
     if (last?.role === 'assistant') {
       const raw = last.text || '';
       const sentences = raw.match(/[^.!?\n]+[.!?\n]+/g) || [raw];
-      const voice = sentences.slice(0, 2).join(' ').trim() || raw.slice(0, 250);
-      speakText(raw.includes('Error:') ? 'Kuch issue aa gaya, dobara try karo.' : voice);
+      const voiceText = sentences.slice(0, 2).join(' ').trim() || raw.slice(0, 250);
+      setLastAiResponse(voiceText);
+      speakText(raw.includes('Error:') ? 'Kuch issue aa gaya, dobara try karo.' : voiceText);
     }
     setLastProcessedMsgCount(conversationHistory.length);
   }, [conversationHistory, isVoiceModeActive]);
@@ -124,110 +155,315 @@ export const VoiceOverlay: React.FC = () => {
     setIsVoiceModeActive(false);
   }, [fullCleanup, setIsVoiceModeActive]);
 
-  if (!isVoiceModeActive) return null;
-
-  const getStatus = () => {
-    if (hasPermissionError) return 'Mic blocked — browser settings mein allow karo';
-    if (voiceState === 'thinking') return 'Soch raha hoon...';
-    if (voiceState === 'speaking') return 'Bol raha hoon... (bolo to ruk jaunga)';
-    return 'Sun raha hoon — boliye!';
+  const toggleMicMute = () => {
+    if (isMicMuted) {
+      setIsMicMuted(false);
+      startListening(handleUserSpeech);
+    } else {
+      setIsMicMuted(true);
+      stopListening();
+    }
   };
 
-  const orbColor = { idle: '#6366f1', listening: '#ef4444', thinking: '#f59e0b', speaking: '#10b981' }[voiceState];
+  const handlePillClick = (promptText: string) => {
+    handleUserSpeech(promptText);
+  };
+
+  if (!isVoiceModeActive) return null;
+
+  const orbColor = {
+    idle: '#6366f1',
+    listening: '#ef4444',
+    thinking: '#f59e0b',
+    speaking: '#10b981',
+  }[voiceState];
+
+  const statusLabel = {
+    idle: 'Tap mic or speak',
+    listening: isMicMuted ? 'Microphone muted' : 'Listening... speak now',
+    thinking: 'Orvixa is thinking...',
+    speaking: 'Orvixa is speaking',
+  }[voiceState];
 
   return (
     <div style={{
-      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: 'rgba(5, 8, 20, 0.97)',
-      backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)',
-      zIndex: 1000000, display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'space-between',
-      padding: '32px 20px', color: '#fff',
-      fontFamily: 'var(--font-sans)', animation: 'fadeIn 0.2s ease',
+      position: 'fixed',
+      top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: 'rgba(3, 7, 18, 0.96)',
+      backdropFilter: 'blur(36px)',
+      WebkitBackdropFilter: 'blur(36px)',
+      zIndex: 1000000,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '28px 24px',
+      color: '#ffffff',
+      fontFamily: 'var(--font-sans)',
+      animation: 'fadeIn 0.25s ease',
+      userSelect: 'none',
     }}>
 
-      {/* HEADER */}
-      <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-          <AudioLines size={13} style={{ color: '#6366f1' }} />
-          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.38)', letterSpacing: '1.2px', textTransform: 'uppercase' }}>
-            Orvixa Voice
+      {/* ── TOP NAV BAR ────────────────────────────────────── */}
+      <div style={{ display: 'flex', width: '100%', maxWidth: '800px', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '10px',
+          background: 'rgba(255, 255, 255, 0.04)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          borderRadius: '24px', padding: '6px 14px',
+        }}>
+          <Sparkles size={14} style={{ color: '#818cf8' }} />
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '1.5px', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase' }}>
+            ORVIXA LIVE VOICE PRO
           </span>
         </div>
-        <select
-          value={voiceLanguage}
-          onChange={(e) => setVoiceLanguage(e.target.value as any)}
-          style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: '7px', padding: '3px 7px', outline: 'none', fontSize: '0.68rem', cursor: 'pointer' }}
-        >
-          <option value="en-US" style={{ background: '#050814' }}>English</option>
-          <option value="hi-IN" style={{ background: '#050814' }}>हिन्दी</option>
-        </select>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <select
+            value={voiceLanguage}
+            onChange={(e) => setVoiceLanguage(e.target.value as any)}
+            style={{
+              background: 'rgba(255, 255, 255, 0.06)',
+              color: 'rgba(255, 255, 255, 0.85)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              borderRadius: '12px',
+              padding: '6px 12px',
+              outline: 'none',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            <option value="en-US" style={{ background: '#030712' }}>🇺🇸 English (Natural)</option>
+            <option value="hi-IN" style={{ background: '#030712' }}>🇮🇳 हिन्दी (Natural)</option>
+          </select>
+        </div>
       </div>
 
-      {/* CENTER */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '22px' }}>
-        {/* Orb */}
+      {/* ── CENTER: PRO VOICE ORB & VISUALIZER ────────────────── */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '28px', width: '100%', maxWidth: '640px' }}>
+
+        {/* Morphing Siri/Gemini Live 3D Orb */}
         <div
-          className={`voice-orb ${voiceState}`}
-          style={{ cursor: voiceState === 'speaking' ? 'pointer' : 'default' }}
-          title={voiceState === 'speaking' ? 'Tap to interrupt' : ''}
-          onClick={() => voiceState === 'speaking' && interruptSpeaking()}
+          style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+          onClick={() => voiceState === 'speaking' ? interruptSpeaking() : toggleMicMute()}
+          title={voiceState === 'speaking' ? 'Tap to stop speaking' : 'Tap to mute/unmute'}
         >
+          {/* Ambient Glow Rings */}
           <div style={{
-            width: '94px', height: '94px', borderRadius: '50%',
-            backgroundColor: 'rgba(5,8,20,0.92)',
+            position: 'absolute',
+            width: '180px', height: '180px', borderRadius: '50%',
+            background: `radial-gradient(circle, ${orbColor}55 0%, transparent 70%)`,
+            animation: 'pulseGlow 2.5s infinite ease-in-out',
+            filter: 'blur(20px)',
+          }} />
+
+          {/* Outer Pulsing Boundary Ring */}
+          <div style={{
+            position: 'absolute',
+            width: '140px', height: '140px', borderRadius: '50%',
+            border: `2px solid ${orbColor}44`,
+            animation: voiceState === 'speaking' || voiceState === 'listening' ? 'pingRing 1.8s infinite ease-out' : 'none',
+          }} />
+
+          {/* Core Orb Container */}
+          <div style={{
+            width: '110px', height: '110px', borderRadius: '50%',
+            background: `radial-gradient(circle at 30% 30%, ${orbColor}dd, #030712)`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: `0 0 0 2px ${orbColor}44, 0 0 20px ${orbColor}1a`,
-            transition: 'box-shadow 0.35s ease', zIndex: 2,
+            boxShadow: `0 0 40px ${orbColor}66, inset 0 2px 10px rgba(255,255,255,0.25)`,
+            transition: 'all 0.35s ease',
+            zIndex: 2,
           }}>
-            {voiceState === 'listening' && <Mic size={30} style={{ color: '#ef4444' }} />}
-            {voiceState === 'speaking' && <Volume2 size={30} style={{ color: '#10b981' }} />}
-            {(voiceState === 'thinking' || voiceState === 'idle') && <AudioLines size={30} style={{ color: '#6366f1' }} />}
+            {isMicMuted ? (
+              <MicOff size={36} style={{ color: '#ef4444' }} />
+            ) : voiceState === 'listening' ? (
+              <Mic size={36} style={{ color: '#ffffff' }} />
+            ) : voiceState === 'speaking' ? (
+              <Volume2 size={36} style={{ color: '#ffffff' }} />
+            ) : (
+              <AudioLines size={36} style={{ color: '#ffffff' }} />
+            )}
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '9px' }}>
-          <span style={{ fontSize: '0.9rem', fontWeight: 600, color: hasPermissionError ? '#ef4444' : 'rgba(255,255,255,0.82)', textAlign: 'center' }}>
-            {getStatus()}
-          </span>
-
-          {transcribedText && voiceState === 'thinking' && (
-            <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.32)', fontStyle: 'italic', textAlign: 'center', maxWidth: '250px' }}>
-              "{transcribedText}"
+        {/* Dynamic Status + Audio Visualizer Bars */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <EqualizerBars active={voiceState === 'speaking' || voiceState === 'listening'} color={orbColor} />
+            <span style={{ fontSize: '1rem', fontWeight: 600, color: hasPermissionError ? '#ef4444' : 'rgba(255,255,255,0.9)' }}>
+              {statusLabel}
             </span>
+          </div>
+
+          {/* User Query Glass Card */}
+          {transcribedText && (
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(16px)',
+              borderRadius: '14px',
+              padding: '10px 18px',
+              fontSize: '0.85rem',
+              color: 'rgba(255,255,255,0.8)',
+              fontStyle: 'italic',
+              textAlign: 'center',
+              maxWidth: '480px',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+            }}>
+              "{transcribedText}"
+            </div>
           )}
 
+          {/* AI Live Response Snippet */}
+          {lastAiResponse && voiceState === 'speaking' && (
+            <div style={{
+              background: 'rgba(16, 185, 129, 0.08)',
+              border: '1px solid rgba(16, 185, 129, 0.25)',
+              borderRadius: '14px',
+              padding: '10px 18px',
+              fontSize: '0.85rem',
+              color: '#10b981',
+              fontWeight: 500,
+              textAlign: 'center',
+              maxWidth: '520px',
+            }}>
+              💬 {lastAiResponse}
+            </div>
+          )}
+
+          {/* Desktop Action Confirmation */}
           {statusBadge && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '7px', background: 'rgba(99,102,241,0.09)', border: '1px solid rgba(99,102,241,0.18)', borderRadius: '9px', padding: '6px 12px', fontSize: '0.77rem', color: 'rgba(255,255,255,0.68)' }}>
-              <ExternalLink size={12} style={{ color: '#818cf8' }} />
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '8px',
+              background: 'rgba(99, 102, 241, 0.12)',
+              border: '1px solid rgba(99, 102, 241, 0.28)',
+              borderRadius: '12px', padding: '8px 16px',
+              fontSize: '0.82rem', color: '#a5b4fc', fontWeight: 500,
+            }}>
+              <ExternalLink size={14} style={{ color: '#818cf8' }} />
               {statusBadge}
             </div>
           )}
         </div>
 
-        {/* Hint pills */}
-        <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', justifyContent: 'center' }}>
+        {/* Pro Quick Action Pills */}
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center', maxWidth: '580px' }}>
           {[
-            '▶ Gaana bajao', '🌐 YouTube kholo', '🔍 Google search',
-            '📄 Page summarize', '⬇ Scroll karo', '🛒 Amazon pe dhundo',
-          ].map(h => (
-            <span key={h} style={{ fontSize: '0.6rem', padding: '2px 7px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px', color: 'rgba(255,255,255,0.22)' }}>
-              {h}
-            </span>
+            { icon: <Play size={11} />, label: 'Gaana bajao', prompt: 'Chaiyya Chaiyya song bajao' },
+            { icon: <Globe size={11} />, label: 'YouTube kholo', prompt: 'YouTube kholo' },
+            { icon: <Search size={11} />, label: 'Google Search', prompt: 'Google pe search karo AI news' },
+            { icon: <FileText size={11} />, label: 'Page summarize', prompt: 'Is page ko summarize karo' },
+            { icon: <ArrowDown size={11} />, label: 'Scroll down', prompt: 'Scroll down karo' },
+            { icon: <ShoppingCart size={11} />, label: 'Amazon pe dhundo', prompt: 'Amazon pe laptop dhundo' },
+          ].map((pill) => (
+            <button
+              key={pill.label}
+              onClick={() => handlePillClick(pill.prompt)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '5px',
+                fontSize: '0.72rem', padding: '5px 12px',
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid rgba(255, 255, 255, 0.09)',
+                borderRadius: '20px', color: 'rgba(255, 255, 255, 0.55)',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.15)';
+                e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.3)';
+                e.currentTarget.style.color = '#ffffff';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.04)';
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.09)';
+                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.55)';
+              }}
+            >
+              {pill.icon} {pill.label}
+            </button>
           ))}
         </div>
       </div>
 
-      {/* CLOSE */}
-      <Button
-        onClick={handleClose}
-        style={{ width: '50px', height: '50px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', transition: 'all 0.15s ease' }}
-        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(239,68,68,0.1)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.2)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.04)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
-        title="Band Karo"
-      >
-        <X size={17} />
-      </Button>
+      {/* ── BOTTOM DOCK CONTROLS ───────────────────────────── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        {/* Mute Mic Toggle */}
+        <Button
+          onClick={toggleMicMute}
+          style={{
+            width: '48px', height: '48px', borderRadius: '50%',
+            backgroundColor: isMicMuted ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+            border: `1px solid ${isMicMuted ? 'rgba(239, 68, 68, 0.4)' : 'rgba(255, 255, 255, 0.1)'}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: isMicMuted ? '#ef4444' : '#ffffff', cursor: 'pointer',
+            transition: 'all 0.15s ease',
+          }}
+          title={isMicMuted ? 'Unmute Mic' : 'Mute Mic'}
+        >
+          {isMicMuted ? <MicOff size={20} /> : <Mic size={20} />}
+        </Button>
+
+        {/* Interrupt / Stop AI Speech */}
+        {voiceState === 'speaking' && (
+          <Button
+            onClick={interruptSpeaking}
+            style={{
+              height: '48px', borderRadius: '24px', padding: '0 20px',
+              backgroundColor: 'rgba(245, 158, 11, 0.2)',
+              border: '1px solid rgba(245, 158, 11, 0.4)',
+              display: 'flex', alignItems: 'center', gap: '8px',
+              color: '#f59e0b', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem',
+              transition: 'all 0.15s ease',
+            }}
+            title="Stop speaking"
+          >
+            <Square size={16} fill="#f59e0b" /> Stop AI
+          </Button>
+        )}
+
+        {/* Close Button */}
+        <Button
+          onClick={handleClose}
+          style={{
+            width: '48px', height: '48px', borderRadius: '50%',
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'rgba(255, 255, 255, 0.6)', cursor: 'pointer',
+            transition: 'all 0.15s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+            e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+            e.currentTarget.style.color = '#ef4444';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+            e.currentTarget.style.color = 'rgba(255, 255, 255, 0.6)';
+          }}
+          title="Exit Voice Mode"
+        >
+          <X size={20} />
+        </Button>
+      </div>
+
+      {/* Keyframe Animation Styles */}
+      <style>{`
+        @keyframes pulseGlow {
+          0%, 100% { transform: scale(1); opacity: 0.5; }
+          50% { transform: scale(1.18); opacity: 0.85; }
+        }
+        @keyframes pingRing {
+          0% { transform: scale(0.95); opacity: 0.8; }
+          100% { transform: scale(1.45); opacity: 0; }
+        }
+        @keyframes equalizerBounce {
+          0% { height: 4px; }
+          100% { height: 22px; }
+        }
+      `}</style>
     </div>
   );
 };
