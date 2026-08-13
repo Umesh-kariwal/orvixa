@@ -476,5 +476,58 @@ declare const chrome: any;
     }
   });
 
+  // ─────────────────────────────────────────────────────────────
+  // AUTONOMOUS YOUTUBE AUTO-PLAY & AD SKIP ENGINE
+  // Runs natively inside any YouTube tab context!
+  // ─────────────────────────────────────────────────────────────
+  if (window.location.hostname.includes('youtube.com')) {
+    // 1. If on YouTube Search Page — Auto-click & Navigate to 1st Video!
+    if (window.location.pathname.includes('/results')) {
+      let attempts = 0;
+      const maxAttempts = 30;
+
+      const tryPlayFirstVideo = () => {
+        attempts++;
+        const anchors = Array.from(document.querySelectorAll('a[href*="/watch?v="]')) as HTMLAnchorElement[];
+        const validVideoAnchor = anchors.find(a => {
+          const href = a.href || '';
+          return href.includes('/watch?v=') && !href.includes('googleadservices') && !href.includes('&list=');
+        });
+
+        if (validVideoAnchor && validVideoAnchor.href) {
+          window.location.href = validVideoAnchor.href;
+          return true;
+        }
+
+        if (attempts < maxAttempts) {
+          setTimeout(tryPlayFirstVideo, 250);
+        }
+        return false;
+      };
+
+      tryPlayFirstVideo();
+
+      const ytObserver = new MutationObserver(() => {
+        if (tryPlayFirstVideo()) ytObserver.disconnect();
+      });
+      if (document.body) {
+        ytObserver.observe(document.body, { childList: true, subtree: true });
+      }
+    }
+
+    // 2. If on YouTube Watch Page — Auto Skip Ads & Ensure Unmuted Playback!
+    if (window.location.pathname.includes('/watch')) {
+      setInterval(() => {
+        const skipBtn = document.querySelector('.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-ad-overlay-close-button') as HTMLElement;
+        if (skipBtn) skipBtn.click();
+
+        const video = document.querySelector('video') as HTMLVideoElement;
+        if (video && video.paused) {
+          video.play().catch(() => {});
+        }
+      }, 500);
+    }
+  }
+
   console.log('[Orvixa Extension] Context Engine extraction layer successfully initialized.');
 })();
