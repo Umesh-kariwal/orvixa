@@ -1,13 +1,25 @@
-/**
- * Orvixa Automation Engine — Zero-Friction Web & Desktop App Automation
- * Native OS Protocol Launchers (Spotify, WhatsApp, Email), Hardware Media Keys,
- * and Instant Search & Navigation Agents without any manual extension setup.
- */
+declare const window: any;
+
+const IS_TAURI = typeof window !== 'undefined' && (!!window.__TAURI__ || !!window.__TAURI_INTERNALS__);
+
+async function invokeTauriCommand(cmd: string, args?: Record<string, unknown>): Promise<any> {
+  if (!IS_TAURI) return null;
+  try {
+    const { invoke } = await import('@tauri-apps/api/core');
+    return await invoke(cmd, args);
+  } catch {
+    return null;
+  }
+}
 
 // ─────────────────────────────────────────────────────────────
 // NATIVE APP + WEB FALLBACK LAUNCHER
 // ─────────────────────────────────────────────────────────────
 export async function openNativeAppOrWeb(nativeUri: string, webFallbackUrl: string): Promise<void> {
+  if (IS_TAURI) {
+    const res = await invokeTauriCommand('open_system_uri', { uri: nativeUri });
+    if (res) return;
+  }
   try {
     const link = document.createElement('a');
     link.href = nativeUri;
@@ -25,6 +37,10 @@ export async function openNativeAppOrWeb(nativeUri: string, webFallbackUrl: stri
 }
 
 export async function openUrl(url: string): Promise<void> {
+  if (IS_TAURI) {
+    const res = await invokeTauriCommand('open_system_uri', { uri: url });
+    if (res) return;
+  }
   try {
     const win = window.open(url, '_blank');
     if (!win || win.closed || typeof win.closed === 'undefined') {
@@ -52,6 +68,16 @@ export async function focusOrOpenSite(_pattern: string, url: string): Promise<vo
 }
 
 export function triggerMediaControl(action: 'next' | 'previous' | 'pause' | 'play'): void {
+  if (IS_TAURI) {
+    const keyMap: Record<string, string> = {
+      next: 'next',
+      previous: 'previous',
+      pause: 'play_pause',
+      play: 'play_pause',
+    };
+    invokeTauriCommand('send_system_media_key', { keyName: keyMap[action] || 'play_pause' });
+  }
+
   if ('mediaSession' in navigator) {
     try {
       if (action === 'next') navigator.mediaSession.metadata = null;

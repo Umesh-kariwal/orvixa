@@ -1,9 +1,55 @@
 use tauri::Manager;
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
+use std::process::Command;
+
+#[tauri::command]
+fn launch_os_process(command: String, args: Vec<String>) -> Result<String, String> {
+    match Command::new(&command).args(&args).spawn() {
+        Ok(_) => Ok(format!("Successfully launched {}", command)),
+        Err(e) => Err(format!("Failed to launch {}: {}", command, e)),
+    }
+}
+
+#[tauri::command]
+fn open_system_uri(uri: String) -> Result<String, String> {
+    #[cfg(target_os = "windows")]
+    {
+        match Command::new("cmd").args(["/C", "start", "", &uri]).spawn() {
+            Ok(_) => Ok(format!("Opened URI {}", uri)),
+            Err(e) => Err(format!("Failed to open URI: {}", e)),
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = uri;
+        Err("Unsupported OS".into())
+    }
+}
+
+#[tauri::command]
+fn send_system_media_key(key_name: String) -> Result<String, String> {
+    let ps_code = match key_name.as_str() {
+        "play_pause" => "$wshell = New-Object -ComObject wscript.shell; $wshell.SendKeys([char]179)",
+        "next" => "$wshell = New-Object -ComObject wscript.shell; $wshell.SendKeys([char]176)",
+        "previous" => "$wshell = New-Object -ComObject wscript.shell; $wshell.SendKeys([char]177)",
+        "mute" => "$wshell = New-Object -ComObject wscript.shell; $wshell.SendKeys([char]173)",
+        _ => return Err("Invalid media key".into()),
+    };
+
+    match Command::new("powershell").args(["-NoProfile", "-Command", ps_code]).spawn() {
+        Ok(_) => Ok(format!("Sent system key: {}", key_name)),
+        Err(e) => Err(format!("Failed to send key: {}", e)),
+    }
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
+    .invoke_handler(tauri::generate_handler![
+        launch_os_process,
+        open_system_uri,
+        send_system_media_key
+    ])
     .plugin(
       tauri_plugin_global_shortcut::Builder::new()
         .with_handler(|app, shortcut, event| {
