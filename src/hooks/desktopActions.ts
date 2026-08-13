@@ -1,6 +1,6 @@
 /**
  * Orvixa Desktop Actions — Real Autonomous Browser & Native App Automation Engine
- * Real World Edge-Case Aware Intent Parsing & Protocol Execution.
+ * Fixed intent evaluation hierarchy to prioritize specialized auto-play agents over generic search.
  */
 
 declare const chrome: any;
@@ -36,7 +36,6 @@ export async function openNativeAppOrWeb(nativeUri: string, webFallbackUrl: stri
     // ignore
   }
 
-  // Fallback to web app tab
   setTimeout(async () => {
     await openUrl(webFallbackUrl);
   }, 350);
@@ -84,9 +83,6 @@ export async function focusOrOpenSite(pattern: string, url: string): Promise<voi
   }
 }
 
-// ─────────────────────────────────────────────────────────────
-// MEDIA CONTROL AUTOMATION (Next, Previous, Pause, Play)
-// ─────────────────────────────────────────────────────────────
 export function triggerMediaControl(action: 'next' | 'previous' | 'pause' | 'play'): void {
   if ('mediaSession' in navigator) {
     try {
@@ -104,14 +100,11 @@ export function triggerMediaControl(action: 'next' | 'previous' | 'pause' | 'pla
   }
 }
 
-// ─────────────────────────────────────────────────────────────
-// AUTONOMOUS AGENT DOM ACTION CALLS
-// ─────────────────────────────────────────────────────────────
 export async function autoPlayYouTubeVideo(songQuery: string): Promise<void> {
   if (IS_EXTENSION) {
     await bgMessage({ type: 'ORVIXA_AUTONOMOUS_YOUTUBE_PLAY', query: songQuery });
   } else {
-    await openUrl(`https://www.youtube.com/results?search_query=${encodeURIComponent(songQuery)}`);
+    await openUrl(`https://www.youtube.com/results?search_query=${encodeURIComponent(songQuery)}&sp=EgIQAQ%253D%253D`);
   }
 }
 
@@ -129,9 +122,6 @@ export async function autoFillActiveInput(value: string): Promise<any> {
   return { filled: false };
 }
 
-// ─────────────────────────────────────────────────────────────
-// WEBSITE DIRECTORY
-// ─────────────────────────────────────────────────────────────
 export const WEBSITES: Record<string, { url: string; searchUrl?: string; nativeUri?: string; label: string }> = {
   youtube: { url: 'https://www.youtube.com', searchUrl: 'https://www.youtube.com/results?search_query=', label: 'YouTube' },
   spotify: { url: 'https://open.spotify.com', searchUrl: 'https://open.spotify.com/search/', nativeUri: 'spotify:search:', label: 'Spotify' },
@@ -160,9 +150,6 @@ export const WEBSITES: Record<string, { url: string; searchUrl?: string; nativeU
   notion: { url: 'https://www.notion.so', nativeUri: 'notion://', label: 'Notion' },
 };
 
-// ─────────────────────────────────────────────────────────────
-// EXTREME ADVANCED ACTION PARSER (REAL WORLD EDGE CASE AWARE)
-// ─────────────────────────────────────────────────────────────
 export type ActionType =
   | 'open_site' | 'search_on_site' | 'play_on_youtube' | 'play_on_spotify'
   | 'media_next' | 'media_previous' | 'media_pause' | 'media_play'
@@ -204,29 +191,57 @@ export function parseVoiceCommand(text: string): VoiceAction {
     return { type: 'media_play', response: 'Music playing!' };
   }
 
-  // ── 3. REAL-WORLD EDGE CASE: WHATSAPP MESSAGING ───────────
+  // ── 3. YOUTUBE SEARCH & AUTO-PLAY (TOP PRIORITY BEFORE GENERIC SITE SEARCH) ──
   // Handles:
-  // "WhatsApp pe 9876543210 ko message karo Hello" (Phone number)
-  // "WhatsApp pe Rahul ko message karo Hello meeting at 5" (Contact + Message)
-  // "Rahul ko WhatsApp message bhejo Hi" (Contact + Message)
+  // "YouTube pe Chaiyya Chaiyya play karo"
+  // "YouTube pe Arijit Singh search karo aur play karo"
+  // "play Chaiyya Chaiyya on YouTube"
+  // "Chaiyya Chaiyya song bajao"
+  if (t.includes('youtube') || /\b(play|bajao|chalao|sunao|lagao|gao)\b/.test(t)) {
+    const isYtExplicit = t.includes('youtube') || t.includes('yt');
+    const isPlayCmd = /\b(play|bajao|chalao|sunao|lagao|gao|search|dhundo)\b/.test(t);
+
+    if (isYtExplicit || isPlayCmd) {
+      let query = t
+        .replace(/youtube|yt|open|kholo|aur|pe|par|me|mein|par|search|karo|play|bajao|chalao|sunao|lagao|gao|song|gaana|gana|music|video/gi, '')
+        .trim();
+
+      // If user just said "open youtube" or "youtube kholo" without search query:
+      if (!query || t === 'youtube' || t === 'open youtube' || t === 'youtube kholo' || t === 'youtube open') {
+        if (!isPlayCmd && isYtExplicit) {
+          return {
+            type: 'open_site',
+            site: 'YouTube',
+            siteUrl: 'https://www.youtube.com',
+            response: 'YouTube open kar raha hoon!',
+          };
+        }
+        query = 'best hindi songs 2024';
+      }
+
+      return {
+        type: 'play_on_youtube',
+        query,
+        response: `Playing "${query}" on YouTube!`,
+      };
+    }
+  }
+
+  // ── 4. WHATSAPP MESSAGING ─────────────────────────────────
   if (t.includes('whatsapp')) {
-    // Phone number regex
     const phoneMatch = t.match(/\b(\+?\d{10,12})\b/);
     const phone = phoneMatch ? phoneMatch[1] : null;
 
-    // Recipient name regex ("Rahul ko", "to Rahul")
     const recipientMatch = t.match(/(?:to|ko)\s+([a-zA-Z0-9_]+)\s+(?:message|msg|bhejo|karo)/i)
       || t.match(/whatsapp\s+(?:pe|par|me|mein)\s+([a-zA-Z0-9_]+)\s+(?:ko|message|msg)/i);
     const recipient = phone || (recipientMatch ? recipientMatch[1] : null);
 
-    // Extract message body text
     let msgBody = t
       .replace(/whatsapp|pe|par|me|mein|message|msg|bhejo|karo|bhej|send|to|ko/gi, '')
       .replace(recipient || '', '')
       .trim();
 
     if (!msgBody && !recipient) {
-      // Missing info: route to AI chat to ask user for contact & text!
       return { type: 'ai_chat', query: text };
     }
 
@@ -253,10 +268,7 @@ export function parseVoiceCommand(text: string): VoiceAction {
     }
   }
 
-  // ── 4. REAL-WORLD EDGE CASE: EMAIL COMPOSE ─────────────────
-  // Handles:
-  // "Rahul ko email bhejo regarding Project Report message Hello"
-  // "email compose karo Project status ready hai"
+  // ── 5. EMAIL COMPOSE ──────────────────────────────────────
   if (t.includes('email') || t.includes('gmail') || t.includes('mail')) {
     const emailMatch = t.match(/\b([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\b/);
     const targetEmail = emailMatch ? emailMatch[1] : '';
@@ -283,15 +295,13 @@ export function parseVoiceCommand(text: string): VoiceAction {
     };
   }
 
-  // ── 5. REAL-WORLD EDGE CASE: SPOTIFY TRACK & ARTIST ───────
-  // Handles: "play All Black on spotify", "spotify pe All Black song bajao"
+  // ── 6. SPOTIFY PLAY ───────────────────────────────────────
   if (t.includes('spotify')) {
     const cleanSong = t
       .replace(/spotify|play|song|on|pe|par|me|mein|bajao|chalao|laga|search|karo/gi, '')
       .trim();
 
     if (!cleanSong) {
-      // If user just said "spotify pe song play karo" without name, ask AI / user
       return { type: 'ai_chat', query: text };
     }
 
@@ -304,7 +314,7 @@ export function parseVoiceCommand(text: string): VoiceAction {
     };
   }
 
-  // ── 6. DOM CLICK BY TEXT ──────────────────────────────────
+  // ── 7. DOM CLICK BY TEXT ──────────────────────────────────
   const clickMatch = t.match(/(?:click|press|tap)\s+(?:on|the)?\s*(.+)/i);
   if (clickMatch && !t.includes('youtube') && !t.includes('song')) {
     const target = clickMatch[1].trim();
@@ -315,7 +325,7 @@ export function parseVoiceCommand(text: string): VoiceAction {
     };
   }
 
-  // ── 7. DOM INPUT FILL ─────────────────────────────────────
+  // ── 8. DOM INPUT FILL ─────────────────────────────────────
   const fillMatch = t.match(/(?:fill|type|write|input)\s+(.+)/i);
   if (fillMatch && !t.includes('search')) {
     const value = fillMatch[1].trim();
@@ -326,7 +336,7 @@ export function parseVoiceCommand(text: string): VoiceAction {
     };
   }
 
-  // ── 8. SCROLL CONTROL ─────────────────────────────────────
+  // ── 9. SCROLL CONTROL ─────────────────────────────────────
   if (/\b(scroll down|neeche jao|aage jao|neeche scroll)\b/.test(t)) {
     return { type: 'scroll_down', response: 'Scrolling down!' };
   }
@@ -334,12 +344,12 @@ export function parseVoiceCommand(text: string): VoiceAction {
     return { type: 'scroll_up', response: 'Scrolling up!' };
   }
 
-  // ── 9. PAGE SUMMARIZATION ──────────────────────────────────
+  // ── 10. PAGE SUMMARIZATION ─────────────────────────────────
   if (/\b(is page ko summarize karo|summarize this|is page ki summary|page padho|read this page|explain this page)\b/.test(t)) {
     return { type: 'summarize_page', response: 'Analyzing page content...' };
   }
 
-  // ── 10. GOOGLE MAPS SEARCH ────────────────────────────────
+  // ── 11. GOOGLE MAPS SEARCH ────────────────────────────────
   const mapsMatch = t.match(/(?:maps|map|location)\s+(?:pe|par|me|mein)?\s*(.+?)\s*(?:dhundo|dhoondo|dikhao|search)?$/i);
   if (mapsMatch && (t.includes('map') || t.includes('location'))) {
     const place = mapsMatch[1].replace(/\b(dhundo|dhoondo|dikhao|search)\b/g, '').trim();
@@ -353,40 +363,9 @@ export function parseVoiceCommand(text: string): VoiceAction {
     }
   }
 
-  // ── 11. YOUTUBE AUTONOMOUS VIDEO PLAY ─────────────────────
-  const playPatterns = [
-    /(?:play|baja(?:o)?|suna(?:o)?|chala(?:o)?|laga(?:o)?|gao?)\s+(.+)/i,
-    /(.+?)\s+(?:play karo|bajao|sunao|chalao|lagao|gaao?)\b/i,
-    /(?:mujhe|muje|hame)\s+(.+?)\s+(?:sunao|bajao|sunana)\b/i,
-    /(?:youtube\s+(?:pe|par|mein)\s+)(.+)/i,
-  ];
-  for (const p of playPatterns) {
-    const m = t.match(p);
-    if (m) {
-      const raw = (m[1] || m[2] || '').trim();
-      const song = raw.replace(/\b(youtube|yt|pe|par|mein|ko|bhi|ek|koi|please|plz)\b/gi, '').trim();
-      if (song.length > 1) {
-        return {
-          type: 'play_on_youtube',
-          query: song,
-          response: `Playing "${song}" on YouTube!`,
-        };
-      }
-    }
-  }
-
-  // Generic "gaana bajao"
-  if (/\b(gaana|song|music|gana|playlist)\b/.test(t) && /\b(baja|chala|suna|play|laga|gao)\b/.test(t)) {
-    return {
-      type: 'play_on_youtube',
-      query: 'hindi songs 2024',
-      response: 'Playing Hindi songs for you!',
-    };
-  }
-
-  // ── 12. SEARCH ON SPECIFIC SITES ───────────────────────────
+  // ── 12. SEARCH ON OTHER SPECIFIC SITES (NON-YOUTUBE) ──────
   for (const [siteName, siteInfo] of Object.entries(WEBSITES)) {
-    if (t.includes(siteName) && siteInfo.searchUrl) {
+    if (siteName !== 'youtube' && t.includes(siteName) && siteInfo.searchUrl) {
       const searchRegex = new RegExp(
         `(?:${siteName}\\s+(?:pe|par|mein|me)\\s+)(.+?)(?:\\s+(?:search|dhundo|dhoondo|dikhaao))?$|` +
         `(.+?)\\s+(?:${siteName}\\s+(?:pe|par|mein)|${siteName}\\s+(?:search|dhundo))`,
@@ -408,9 +387,9 @@ export function parseVoiceCommand(text: string): VoiceAction {
     }
   }
 
-  // ── 13. OPEN WEBSITES & APPS ─────────────────────────────
+  // ── 13. OPEN OTHER WEBSITES & APPS ────────────────────────
   for (const [siteName, siteInfo] of Object.entries(WEBSITES)) {
-    if (t.includes(siteName) && /\b(open|kholo|jao|visit|chalao|pe jao|par jao|launch|start)\b/.test(t)) {
+    if (siteName !== 'youtube' && t.includes(siteName) && /\b(open|kholo|jao|visit|chalao|pe jao|par jao|launch|start)\b/.test(t)) {
       return {
         type: 'open_site',
         site: siteInfo.label,
@@ -422,7 +401,7 @@ export function parseVoiceCommand(text: string): VoiceAction {
   }
 
   for (const [siteName, siteInfo] of Object.entries(WEBSITES)) {
-    if (t === siteName || t === `open ${siteName}` || t === `${siteName} kholo` || t === `${siteName} open`) {
+    if (siteName !== 'youtube' && (t === siteName || t === `open ${siteName}` || t === `${siteName} kholo` || t === `${siteName} open`)) {
       return {
         type: 'open_site',
         site: siteInfo.label,
