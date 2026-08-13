@@ -106,9 +106,11 @@ export const VoiceOverlay: React.FC = () => {
 
     // Desktop action
     if (cmd.type !== 'ai_chat') {
+      setLastAiResponse(''); // Clear any previous AI text response
       if (cmd.type === 'play_on_youtube' && cmd.query) {
         const q = cmd.query;
         const resolveVideo = async () => {
+          // 1. Orvixa Backend Resolver
           try {
             const res = await fetch(`${env.apiBaseUrl}/youtube/search?q=${encodeURIComponent(q)}`);
             if (res.ok) {
@@ -120,6 +122,20 @@ export const VoiceOverlay: React.FC = () => {
             }
           } catch {}
 
+          // 2. Client-side HTML Proxy Video ID Extractor
+          try {
+            const rawRes = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(`https://www.youtube.com/results?search_query=${encodeURIComponent(q)}&sp=EgIQAQ%3D%3D`)}`);
+            if (rawRes.ok) {
+              const html = await rawRes.text();
+              const match = html.match(/\/watch\?v=([a-zA-Z0-9_-]{11})/);
+              if (match && match[1]) {
+                setActiveYouTubeEmbedUrl(`https://www.youtube.com/embed/${match[1]}?autoplay=1&enablejsapi=1`);
+                return;
+              }
+            }
+          } catch {}
+
+          // 3. Backup Piped API
           try {
             const res2 = await fetch(`https://pipedapi.kavin.rocks/search?q=${encodeURIComponent(q)}&filter=music_songs`);
             if (res2.ok) {
@@ -132,8 +148,6 @@ export const VoiceOverlay: React.FC = () => {
               }
             }
           } catch {}
-
-          setActiveYouTubeEmbedUrl(`https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(q)}&autoplay=1`);
         };
         resolveVideo();
       }
