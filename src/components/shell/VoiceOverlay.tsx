@@ -33,8 +33,6 @@ const EqualizerBars: React.FC<{ active: boolean; color: string }> = ({ active, c
   );
 };
 
-import { env } from '@/config/env';
-
 // ─────────────────────────────────────────────────────────────
 // VOICE OVERLAY — PRO LEVEL ULTRA UPGRADE
 // ─────────────────────────────────────────────────────────────
@@ -56,7 +54,6 @@ export const VoiceOverlay: React.FC = () => {
   const [lastAiResponse, setLastAiResponse] = useState('');
   const [statusBadge, setStatusBadge] = useState<string | null>(null);
   const [isMicMuted, setIsMicMuted] = useState(false);
-  const [activeYouTubeEmbedUrl, setActiveYouTubeEmbedUrl] = useState<string | null>(null);
   const [lastProcessedMsgCount, setLastProcessedMsgCount] = useState(conversationHistory.length);
   const submittedRef = useRef(false);
   const lastExecutedTimeRef = useRef<number>(0);
@@ -106,51 +103,7 @@ export const VoiceOverlay: React.FC = () => {
 
     // Desktop action
     if (cmd.type !== 'ai_chat') {
-      setLastAiResponse(''); // Clear any previous AI text response
-      if (cmd.type === 'play_on_youtube' && cmd.query) {
-        const q = cmd.query;
-        const resolveVideo = async () => {
-          // 1. Orvixa Backend Resolver
-          try {
-            const res = await fetch(`${env.apiBaseUrl}/youtube/search?q=${encodeURIComponent(q)}`);
-            if (res.ok) {
-              const data = await res.json();
-              if (data.embedUrl) {
-                setActiveYouTubeEmbedUrl(data.embedUrl);
-                return;
-              }
-            }
-          } catch {}
-
-          // 2. Client-side HTML Proxy Video ID Extractor
-          try {
-            const rawRes = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(`https://www.youtube.com/results?search_query=${encodeURIComponent(q)}&sp=EgIQAQ%3D%3D`)}`);
-            if (rawRes.ok) {
-              const html = await rawRes.text();
-              const match = html.match(/\/watch\?v=([a-zA-Z0-9_-]{11})/);
-              if (match && match[1]) {
-                setActiveYouTubeEmbedUrl(`https://www.youtube.com/embed/${match[1]}?autoplay=1&enablejsapi=1`);
-                return;
-              }
-            }
-          } catch {}
-
-          // 3. Backup Piped API
-          try {
-            const res2 = await fetch(`https://pipedapi.kavin.rocks/search?q=${encodeURIComponent(q)}&filter=music_songs`);
-            if (res2.ok) {
-              const data2 = await res2.json();
-              const item = data2?.items?.[0];
-              if (item && item.url) {
-                const vidId = item.url.replace('/watch?v=', '');
-                setActiveYouTubeEmbedUrl(`https://www.youtube.com/embed/${vidId}?autoplay=1&enablejsapi=1`);
-                return;
-              }
-            }
-          } catch {}
-        };
-        resolveVideo();
-      }
+      setLastAiResponse('');
       const responseText = await executeVoiceAction(cmd);
       if (responseText) {
         setStatusBadge(responseText);
@@ -411,41 +364,6 @@ export const VoiceOverlay: React.FC = () => {
             </div>
           )}
 
-          {/* In-App Pro YouTube Auto-Player Card */}
-          {activeYouTubeEmbedUrl && (
-            <div style={{
-              position: 'relative',
-              width: '100%',
-              maxWidth: '520px',
-              height: '290px',
-              borderRadius: '16px',
-              overflow: 'hidden',
-              border: '1px solid rgba(99, 102, 241, 0.3)',
-              boxShadow: '0 12px 40px rgba(0, 0, 0, 0.7)',
-              marginTop: '10px',
-              background: '#000',
-            }}>
-              <button
-                onClick={() => setActiveYouTubeEmbedUrl(null)}
-                style={{
-                  position: 'absolute', top: '8px', right: '8px', zIndex: 20,
-                  background: 'rgba(0,0,0,0.75)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '50%',
-                  color: '#fff', width: '28px', height: '28px', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}
-                title="Close Player"
-              >
-                <X size={14} />
-              </button>
-              <iframe
-                src={activeYouTubeEmbedUrl}
-                style={{ width: '100%', height: '100%', border: 'none' }}
-                allow="autoplay; encrypted-media; fullscreen"
-                allowFullScreen
-                title="Orvixa YouTube Auto-Player"
-              />
-            </div>
-          )}
         </div>
 
         {/* Pro Quick Action Pills */}
