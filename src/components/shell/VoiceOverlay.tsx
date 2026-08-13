@@ -54,6 +54,7 @@ export const VoiceOverlay: React.FC = () => {
   const [lastAiResponse, setLastAiResponse] = useState('');
   const [statusBadge, setStatusBadge] = useState<string | null>(null);
   const [isMicMuted, setIsMicMuted] = useState(false);
+  const [activeYouTubeQuery, setActiveYouTubeQuery] = useState<string | null>(null);
   const [lastProcessedMsgCount, setLastProcessedMsgCount] = useState(conversationHistory.length);
   const submittedRef = useRef(false);
 
@@ -91,6 +92,9 @@ export const VoiceOverlay: React.FC = () => {
 
     // Desktop action
     if (cmd.type !== 'ai_chat') {
+      if (cmd.type === 'play_on_youtube' && cmd.query) {
+        setActiveYouTubeQuery(cmd.query);
+      }
       const responseText = await executeVoiceAction(cmd);
       if (responseText) {
         setStatusBadge(responseText);
@@ -348,6 +352,42 @@ export const VoiceOverlay: React.FC = () => {
             }}>
               <ExternalLink size={14} style={{ color: '#818cf8' }} />
               {statusBadge}
+            </div>
+          )}
+
+          {/* In-App Pro YouTube Auto-Player Card */}
+          {activeYouTubeQuery && (
+            <div style={{
+              position: 'relative',
+              width: '100%',
+              maxWidth: '520px',
+              height: '290px',
+              borderRadius: '16px',
+              overflow: 'hidden',
+              border: '1px solid rgba(99, 102, 241, 0.3)',
+              boxShadow: '0 12px 40px rgba(0, 0, 0, 0.7)',
+              marginTop: '10px',
+              background: '#000',
+            }}>
+              <button
+                onClick={() => setActiveYouTubeQuery(null)}
+                style={{
+                  position: 'absolute', top: '8px', right: '8px', zIndex: 20,
+                  background: 'rgba(0,0,0,0.75)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '50%',
+                  color: '#fff', width: '28px', height: '28px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+                title="Close Player"
+              >
+                <X size={14} />
+              </button>
+              <iframe
+                src={`https://www.youtube-nocookie.com/embed?listType=search&list=${encodeURIComponent(activeYouTubeQuery)}&autoplay=1`}
+                style={{ width: '100%', height: '100%', border: 'none' }}
+                allow="autoplay; encrypted-media; fullscreen"
+                allowFullScreen
+                title="Orvixa YouTube Auto-Player"
+              />
             </div>
           )}
         </div>
