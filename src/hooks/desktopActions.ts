@@ -45,13 +45,15 @@ export async function openUrl(url: string): Promise<void> {
   if (IS_EXTENSION) {
     await bgMessage({ type: 'ORVIXA_OPEN_URL', url });
   } else {
-    const a = document.createElement('a');
-    a.href = url;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => document.body.removeChild(a), 300);
+    try {
+      const win = window.open(url, '_blank');
+      if (!win || win.closed || typeof win.closed === 'undefined') {
+        // Popup was blocked by browser — navigate directly in current window!
+        window.location.href = url;
+      }
+    } catch {
+      window.location.href = url;
+    }
   }
 }
 
@@ -192,28 +194,24 @@ export function parseVoiceCommand(text: string): VoiceAction {
   }
 
   // ── 3. YOUTUBE SEARCH & AUTO-PLAY (TOP PRIORITY BEFORE GENERIC SITE SEARCH) ──
-  // Handles:
-  // "YouTube pe Chaiyya Chaiyya play karo"
-  // "YouTube pe Arijit Singh search karo aur play karo"
-  // "play Chaiyya Chaiyya on YouTube"
-  // "Chaiyya Chaiyya song bajao"
   if (t.includes('youtube') || /\b(play|bajao|chalao|sunao|lagao|gao)\b/.test(t)) {
     const isYtExplicit = t.includes('youtube') || t.includes('yt');
     const isPlayCmd = /\b(play|bajao|chalao|sunao|lagao|gao|search|dhundo)\b/.test(t);
 
     if (isYtExplicit || isPlayCmd) {
       let query = t
-        .replace(/youtube|yt|open|kholo|aur|pe|par|me|mein|par|search|karo|play|bajao|chalao|sunao|lagao|gao|song|gaana|gana|music|video/gi, '')
+        .replace(/^(i\s+want\s+to\s+)?(search|play|find|listen\s+to|look\s+for|open|kholo|chalao|bajao|sunao|lagao|gao)\s+/gi, '')
+        .replace(/\s+(on|in|pe|par|me|mein)\s+(youtube|yt)$/gi, '')
+        .replace(/\b(youtube|yt|song|gaana|gana|music|video)\b/gi, '')
         .trim();
 
-      // If user just said "open youtube" or "youtube kholo" without search query:
       if (!query || t === 'youtube' || t === 'open youtube' || t === 'youtube kholo' || t === 'youtube open') {
         if (!isPlayCmd && isYtExplicit) {
           return {
             type: 'open_site',
             site: 'YouTube',
             siteUrl: 'https://www.youtube.com',
-            response: 'YouTube open kar raha hoon!',
+            response: 'Opening YouTube!',
           };
         }
         query = 'best hindi songs 2024';
@@ -222,6 +220,7 @@ export function parseVoiceCommand(text: string): VoiceAction {
       return {
         type: 'play_on_youtube',
         query,
+        siteUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&sp=EgIQAQ%253D%253D`,
         response: `Playing "${query}" on YouTube!`,
       };
     }
