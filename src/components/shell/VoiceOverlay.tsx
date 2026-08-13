@@ -107,14 +107,35 @@ export const VoiceOverlay: React.FC = () => {
     // Desktop action
     if (cmd.type !== 'ai_chat') {
       if (cmd.type === 'play_on_youtube' && cmd.query) {
-        fetch(`${env.apiBaseUrl}/youtube/search?q=${encodeURIComponent(cmd.query)}`)
-          .then(res => res.json())
-          .then(data => {
-            if (data.embedUrl) {
-              setActiveYouTubeEmbedUrl(data.embedUrl);
+        const q = cmd.query;
+        const resolveVideo = async () => {
+          try {
+            const res = await fetch(`${env.apiBaseUrl}/youtube/search?q=${encodeURIComponent(q)}`);
+            if (res.ok) {
+              const data = await res.json();
+              if (data.embedUrl) {
+                setActiveYouTubeEmbedUrl(data.embedUrl);
+                return;
+              }
             }
-          })
-          .catch(() => {});
+          } catch {}
+
+          try {
+            const res2 = await fetch(`https://pipedapi.kavin.rocks/search?q=${encodeURIComponent(q)}&filter=music_songs`);
+            if (res2.ok) {
+              const data2 = await res2.json();
+              const item = data2?.items?.[0];
+              if (item && item.url) {
+                const vidId = item.url.replace('/watch?v=', '');
+                setActiveYouTubeEmbedUrl(`https://www.youtube.com/embed/${vidId}?autoplay=1&enablejsapi=1`);
+                return;
+              }
+            }
+          } catch {}
+
+          setActiveYouTubeEmbedUrl(`https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(q)}&autoplay=1`);
+        };
+        resolveVideo();
       }
       const responseText = await executeVoiceAction(cmd);
       if (responseText) {
