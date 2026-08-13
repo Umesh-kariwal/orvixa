@@ -13,7 +13,7 @@ async function invokeTauriCommand(cmd: string, args?: Record<string, unknown>): 
 }
 
 // ─────────────────────────────────────────────────────────────
-// NATIVE APP + WEB FALLBACK LAUNCHER
+// NATIVE OS APP + WEB FALLBACK LAUNCHER
 // ─────────────────────────────────────────────────────────────
 export async function openNativeAppOrWeb(nativeUri: string, webFallbackUrl: string): Promise<void> {
   if (IS_TAURI) {
@@ -67,13 +67,16 @@ export async function focusOrOpenSite(_pattern: string, url: string): Promise<vo
   await openUrl(url);
 }
 
-export function triggerMediaControl(action: 'next' | 'previous' | 'pause' | 'play'): void {
+export function triggerMediaControl(action: 'next' | 'previous' | 'pause' | 'play' | 'volume_up' | 'volume_down' | 'mute'): void {
   if (IS_TAURI) {
     const keyMap: Record<string, string> = {
       next: 'next',
       previous: 'previous',
       pause: 'play_pause',
       play: 'play_pause',
+      volume_up: 'volume_up',
+      volume_down: 'volume_down',
+      mute: 'mute',
     };
     invokeTauriCommand('send_system_media_key', { keyName: keyMap[action] || 'play_pause' });
   }
@@ -94,6 +97,38 @@ export function triggerMediaControl(action: 'next' | 'previous' | 'pause' | 'pla
   }
 }
 
+export async function resolveYouTubeVideoId(songQuery: string): Promise<string | null> {
+  const cleanQ = songQuery
+    .replace(/\b(youtube|yt|open|kholo|aur|pe|par|me|mein|search|dhundo|dhoondo|karo|bhejo|bhej|play|bajao|chalao|sunao|lagao|gao|gaao|song|gaana|gana|music|video|i|want|to|listen|for|find|look)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim() || songQuery.trim();
+
+  if (!cleanQ) return null;
+
+  try {
+    const res = await fetch(`https://inv.tux.pizza/api/v1/search?q=${encodeURIComponent(cleanQ)}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data[0]?.videoId) {
+        return data[0].videoId;
+      }
+    }
+  } catch {}
+
+  try {
+    const res2 = await fetch(`https://pipedapi.kavin.rocks/search?q=${encodeURIComponent(cleanQ)}&filter=music_songs`);
+    if (res2.ok) {
+      const data2 = await res2.json();
+      const item = data2?.items?.[0];
+      if (item && item.url) {
+        return item.url.replace('/watch?v=', '');
+      }
+    }
+  } catch {}
+
+  return null;
+}
+
 export async function autoPlayYouTubeVideo(songQuery: string): Promise<void> {
   const cleanQ = songQuery
     .replace(/\b(youtube|yt|open|kholo|aur|pe|par|me|mein|search|dhundo|dhoondo|karo|bhejo|bhej|play|bajao|chalao|sunao|lagao|gao|gaao|song|gaana|gana|music|video|i|want|to|listen|for|find|look)\b/gi, '')
@@ -102,38 +137,12 @@ export async function autoPlayYouTubeVideo(songQuery: string): Promise<void> {
 
   if (!cleanQ) return;
 
-  // 1. Try Invidious Public Video ID Resolver API
-  try {
-    const res = await fetch(`https://inv.tux.pizza/api/v1/search?q=${encodeURIComponent(cleanQ)}`);
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data) && data[0]?.videoId) {
-        // Direct YouTube Watch Video Page with Autoplay enabled
-        await openUrl(`https://www.youtube.com/watch?v=${data[0].videoId}&autoplay=1`);
-        return;
-      }
-    }
-  } catch {
-    // fallback
+  const vidId = await resolveYouTubeVideoId(cleanQ);
+  if (vidId) {
+    await openUrl(`https://www.youtube.com/watch?v=${vidId}&autoplay=1`);
+    return;
   }
 
-  // 2. Try Piped Music API Resolver
-  try {
-    const res2 = await fetch(`https://pipedapi.kavin.rocks/search?q=${encodeURIComponent(cleanQ)}&filter=music_songs`);
-    if (res2.ok) {
-      const data2 = await res2.json();
-      const item = data2?.items?.[0];
-      if (item && item.url) {
-        const vidId = item.url.replace('/watch?v=', '');
-        await openUrl(`https://www.youtube.com/watch?v=${vidId}&autoplay=1`);
-        return;
-      }
-    }
-  } catch {
-    // fallback
-  }
-
-  // 3. Fallback: Search URL with Video Filter
   await openUrl(`https://www.youtube.com/results?search_query=${encodeURIComponent(cleanQ)}&sp=EgIQAQ%253D%253D`);
 }
 
@@ -196,7 +205,8 @@ export const WEBSITES: Record<string, { url: string; searchUrl?: string; nativeU
 export type ActionType =
   | 'open_site' | 'search_on_site' | 'play_on_youtube' | 'play_on_spotify'
   | 'media_next' | 'media_previous' | 'media_pause' | 'media_play'
-  | 'whatsapp_msg' | 'email_compose' | 'maps_search'
+  | 'volume_up' | 'volume_down' | 'volume_mute' | 'lock_screen' | 'open_folder'
+  | 'whatsapp_msg' | 'email_compose' | 'maps_search' | 'compound_yt_whatsapp'
   | 'google_search' | 'scroll_down' | 'scroll_up'
   | 'click_text' | 'fill_input'
   | 'summarize_page' | 'read_page' | 'close_voice' | 'ai_chat';
@@ -209,6 +219,7 @@ export interface VoiceAction {
   query?: string;
   recipient?: string;
   message?: string;
+  folderPath?: string;
   response?: string;
 }
 
@@ -220,7 +231,30 @@ export function parseVoiceCommand(text: string): VoiceAction {
     return { type: 'close_voice' };
   }
 
-  // ── 2. MEDIA CONTROLS (Next, Prev, Pause, Resume) ─────────
+  // ── 2. HARDWARE VOLUME & LOCK SYSTEM CONTROLS ─────────────
+  if (/\b(aawaaz badhao|volume up|sound badhao|volume Increase|volume badao)\b/.test(t)) {
+    return { type: 'volume_up', response: 'Increasing volume!' };
+  }
+  if (/\b(aawaaz kam karo|volume down|sound kam karo|volume decrease)\b/.test(t)) {
+    return { type: 'volume_down', response: 'Decreasing volume!' };
+  }
+  if (/\b(mute karo|silence|aawaaz band karo|volume mute)\b/.test(t)) {
+    return { type: 'volume_mute', response: 'Muting volume!' };
+  }
+  if (/\b(screen lock|lock screen|system lock|lock pc|pc lock)\b/.test(t)) {
+    return { type: 'lock_screen', response: 'Locking Windows screen!' };
+  }
+
+  // ── 3. FOLDER NAVIGATION (Explorer) ───────────────────────
+  if (/\b(downloads|download|documents|pictures|desktop)\s+(folder|kholo|open)\b/.test(t) || /\b(open|kholo)\s+(downloads|documents|pictures|desktop)\b/.test(t)) {
+    let folder = 'shell:Downloads';
+    if (t.includes('document')) folder = 'shell:Personal';
+    if (t.includes('picture')) folder = 'shell:My Pictures';
+    if (t.includes('desktop')) folder = 'shell:Desktop';
+    return { type: 'open_folder', folderPath: folder, response: `Opening ${folder.replace('shell:', '')} folder!` };
+  }
+
+  // ── 4. MEDIA CONTROLS (Next, Prev, Pause, Resume) ─────────
   if (/\b(next song|song change|change song|aagla song|aagla gaana|next track|skip song|skip track)\b/.test(t)) {
     return { type: 'media_next', response: 'Playing next song!' };
   }
@@ -234,7 +268,24 @@ export function parseVoiceCommand(text: string): VoiceAction {
     return { type: 'media_play', response: 'Music playing!' };
   }
 
-  // ── 3. YOUTUBE SEARCH & PLAY ──────────────────────────────
+  // ── 5. COMPOUND MULTI-APP AUTOMATION (YouTube + WhatsApp) ─
+  if (t.includes('whatsapp') && (t.includes('youtube') || t.includes('song') || t.includes('link'))) {
+    const recipientMatch = t.match(/([a-zA-Z0-9_]+)\s+(?:ko|message|bhejo|send)/i);
+    const recipient = recipientMatch ? recipientMatch[1] : 'Contact';
+    const songQuery = t
+      .replace(/whatsapp|pe|par|me|mein|message|msg|bhejo|karo|bhej|send|to|ko|link|share/gi, '')
+      .replace(recipient, '')
+      .trim();
+
+    return {
+      type: 'compound_yt_whatsapp',
+      query: songQuery || 'Kesariya',
+      recipient,
+      response: `Resolving YouTube link for "${songQuery || 'Kesariya'}" and sending to ${recipient} on WhatsApp!`,
+    };
+  }
+
+  // ── 6. YOUTUBE SEARCH & PLAY ──────────────────────────────
   if (t.includes('youtube') || /\b(play|bajao|chalao|sunao|lagao|gao)\b/.test(t)) {
     const isYtExplicit = t.includes('youtube') || t.includes('yt');
     const isPlayCmd = /\b(play|bajao|chalao|sunao|lagao|gao|search|dhundo)\b/.test(t);
@@ -266,7 +317,7 @@ export function parseVoiceCommand(text: string): VoiceAction {
     }
   }
 
-  // ── 4. WHATSAPP MESSAGING ─────────────────────────────────
+  // ── 7. WHATSAPP MESSAGING ─────────────────────────────────
   if (t.includes('whatsapp')) {
     const phoneMatch = t.match(/\b(\+?\d{10,12})\b/);
     const phone = phoneMatch ? phoneMatch[1] : null;
@@ -307,7 +358,7 @@ export function parseVoiceCommand(text: string): VoiceAction {
     }
   }
 
-  // ── 5. EMAIL COMPOSE ──────────────────────────────────────
+  // ── 8. EMAIL COMPOSE ──────────────────────────────────────
   if (t.includes('email') || t.includes('gmail') || t.includes('mail')) {
     const emailMatch = t.match(/\b([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\b/);
     const targetEmail = emailMatch ? emailMatch[1] : '';
@@ -334,7 +385,7 @@ export function parseVoiceCommand(text: string): VoiceAction {
     };
   }
 
-  // ── 6. SPOTIFY PLAY ───────────────────────────────────────
+  // ── 9. SPOTIFY PLAY ───────────────────────────────────────
   if (t.includes('spotify')) {
     const cleanSong = t
       .replace(/spotify|play|song|on|pe|par|me|mein|bajao|chalao|laga|search|karo/gi, '')
@@ -353,7 +404,7 @@ export function parseVoiceCommand(text: string): VoiceAction {
     };
   }
 
-  // ── 7. DOM CLICK BY TEXT ──────────────────────────────────
+  // ── 10. DOM CLICK BY TEXT ──────────────────────────────────
   const clickMatch = t.match(/(?:click|press|tap)\s+(?:on|the)?\s*(.+)/i);
   if (clickMatch && !t.includes('youtube') && !t.includes('song')) {
     const target = clickMatch[1].trim();
@@ -364,18 +415,7 @@ export function parseVoiceCommand(text: string): VoiceAction {
     };
   }
 
-  // ── 8. DOM INPUT FILL ─────────────────────────────────────
-  const fillMatch = t.match(/(?:fill|type|write|input)\s+(.+)/i);
-  if (fillMatch && !t.includes('search')) {
-    const value = fillMatch[1].trim();
-    return {
-      type: 'fill_input',
-      query: value,
-      response: `Typing "${value}" into active field!`,
-    };
-  }
-
-  // ── 9. SCROLL CONTROL ─────────────────────────────────────
+  // ── 11. SCROLL CONTROL ─────────────────────────────────────
   if (/\b(scroll down|neeche jao|aage jao|neeche scroll)\b/.test(t)) {
     return { type: 'scroll_down', response: 'Scrolling down!' };
   }
@@ -383,12 +423,12 @@ export function parseVoiceCommand(text: string): VoiceAction {
     return { type: 'scroll_up', response: 'Scrolling up!' };
   }
 
-  // ── 10. PAGE SUMMARIZATION ─────────────────────────────────
+  // ── 12. PAGE SUMMARIZATION ─────────────────────────────────
   if (/\b(is page ko summarize karo|summarize this|is page ki summary|page padho|read this page|explain this page)\b/.test(t)) {
     return { type: 'summarize_page', response: 'Analyzing page content...' };
   }
 
-  // ── 11. GOOGLE MAPS SEARCH ────────────────────────────────
+  // ── 13. GOOGLE MAPS SEARCH ────────────────────────────────
   const mapsMatch = t.match(/(?:maps|map|location)\s+(?:pe|par|me|mein)?\s*(.+?)\s*(?:dhundo|dhoondo|dikhao|search)?$/i);
   if (mapsMatch && (t.includes('map') || t.includes('location'))) {
     const place = mapsMatch[1].replace(/\b(dhundo|dhoondo|dikhao|search)\b/g, '').trim();
@@ -402,7 +442,7 @@ export function parseVoiceCommand(text: string): VoiceAction {
     }
   }
 
-  // ── 12. SEARCH ON OTHER SPECIFIC SITES (NON-YOUTUBE) ──────
+  // ── 14. SEARCH ON OTHER SPECIFIC SITES (NON-YOUTUBE) ──────
   for (const [siteName, siteInfo] of Object.entries(WEBSITES)) {
     if (siteName !== 'youtube' && t.includes(siteName) && siteInfo.searchUrl) {
       const searchRegex = new RegExp(
@@ -426,7 +466,7 @@ export function parseVoiceCommand(text: string): VoiceAction {
     }
   }
 
-  // ── 13. OPEN OTHER WEBSITES & APPS ────────────────────────
+  // ── 15. OPEN OTHER WEBSITES & APPS ────────────────────────
   for (const [siteName, siteInfo] of Object.entries(WEBSITES)) {
     if (siteName !== 'youtube' && t.includes(siteName) && /\b(open|kholo|jao|visit|chalao|pe jao|par jao|launch|start)\b/.test(t)) {
       return {
@@ -439,19 +479,7 @@ export function parseVoiceCommand(text: string): VoiceAction {
     }
   }
 
-  for (const [siteName, siteInfo] of Object.entries(WEBSITES)) {
-    if (siteName !== 'youtube' && (t === siteName || t === `open ${siteName}` || t === `${siteName} kholo` || t === `${siteName} open`)) {
-      return {
-        type: 'open_site',
-        site: siteInfo.label,
-        siteUrl: siteInfo.url,
-        nativeUri: siteInfo.nativeUri,
-        response: `Opening ${siteInfo.label}!`,
-      };
-    }
-  }
-
-  // ── 14. GOOGLE SEARCH ─────────────────────────────────────
+  // ── 16. GOOGLE SEARCH ─────────────────────────────────────
   const googleSearchPatterns = [
     /(?:google\s+(?:pe|par|mein|me)\s+|google\s+karo\s+|search\s+for\s+|search\s+)(.+)/i,
     /(.+?)\s+(?:google\s+(?:pe|par)|google\s+karo|search\s+karo)\b/i,
@@ -476,6 +504,39 @@ export function parseVoiceCommand(text: string): VoiceAction {
 
 export async function executeVoiceAction(action: VoiceAction): Promise<string | null> {
   switch (action.type) {
+    case 'volume_up':
+      triggerMediaControl('volume_up');
+      return action.response || 'Increasing volume!';
+
+    case 'volume_down':
+      triggerMediaControl('volume_down');
+      return action.response || 'Decreasing volume!';
+
+    case 'volume_mute':
+      triggerMediaControl('mute');
+      return action.response || 'Muting volume!';
+
+    case 'lock_screen':
+      if (IS_TAURI) {
+        await invokeTauriCommand('lock_windows_screen');
+      }
+      return action.response || 'Screen locked!';
+
+    case 'open_folder':
+      if (IS_TAURI) {
+        await invokeTauriCommand('open_system_folder', { folderPath: action.folderPath || 'shell:Downloads' });
+      }
+      return action.response || 'Folder opened!';
+
+    case 'compound_yt_whatsapp':
+      if (action.query && action.recipient) {
+        const vidId = await resolveYouTubeVideoId(action.query);
+        const ytLink = vidId ? `https://www.youtube.com/watch?v=${vidId}` : `https://www.youtube.com/results?search_query=${encodeURIComponent(action.query)}`;
+        const textMsg = `Check out this song ${action.query}: ${ytLink}`;
+        await openNativeAppOrWeb(`whatsapp://send?text=${encodeURIComponent(textMsg)}`, `https://web.whatsapp.com/send?text=${encodeURIComponent(textMsg)}`);
+      }
+      return action.response || null;
+
     case 'media_next':
       triggerMediaControl('next');
       return action.response || 'Next song!';

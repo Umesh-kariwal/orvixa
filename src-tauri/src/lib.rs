@@ -33,6 +33,8 @@ fn send_system_media_key(key_name: String) -> Result<String, String> {
         "next" => "$wshell = New-Object -ComObject wscript.shell; $wshell.SendKeys([char]176)",
         "previous" => "$wshell = New-Object -ComObject wscript.shell; $wshell.SendKeys([char]177)",
         "mute" => "$wshell = New-Object -ComObject wscript.shell; $wshell.SendKeys([char]173)",
+        "volume_up" => "$wshell = New-Object -ComObject wscript.shell; for($i=0;$i -lt 5;$i++){ $wshell.SendKeys([char]175) }",
+        "volume_down" => "$wshell = New-Object -ComObject wscript.shell; for($i=0;$i -lt 5;$i++){ $wshell.SendKeys([char]174) }",
         _ => return Err("Invalid media key".into()),
     };
 
@@ -42,13 +44,39 @@ fn send_system_media_key(key_name: String) -> Result<String, String> {
     }
 }
 
+#[tauri::command]
+fn lock_windows_screen() -> Result<String, String> {
+    #[cfg(target_os = "windows")]
+    {
+        match Command::new("rundll32.exe").args(["user32.dll,LockWorkStation"]).spawn() {
+            Ok(_) => Ok("Windows screen locked successfully".into()),
+            Err(e) => Err(format!("Failed to lock screen: {}", e)),
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        Err("Lock screen only supported on Windows".into())
+    }
+}
+
+#[tauri::command]
+fn open_system_folder(folder_path: String) -> Result<String, String> {
+    let target = if folder_path.is_empty() { "shell:Downloads" } else { &folder_path };
+    match Command::new("explorer.exe").arg(target).spawn() {
+        Ok(_) => Ok(format!("Opened folder: {}", target)),
+        Err(e) => Err(format!("Failed to open folder: {}", e)),
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
     .invoke_handler(tauri::generate_handler![
         launch_os_process,
         open_system_uri,
-        send_system_media_key
+        send_system_media_key,
+        lock_windows_screen,
+        open_system_folder
     ])
     .plugin(
       tauri_plugin_global_shortcut::Builder::new()
