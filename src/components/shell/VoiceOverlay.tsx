@@ -355,12 +355,12 @@ export const VoiceOverlay: React.FC = () => {
         {/* Pro Quick Action Pills */}
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center', maxWidth: '580px' }}>
           {[
-            { icon: <Play size={11} />, label: 'Gaana bajao', prompt: 'Chaiyya Chaiyya song bajao' },
-            { icon: <Globe size={11} />, label: 'YouTube kholo', prompt: 'YouTube kholo' },
-            { icon: <Search size={11} />, label: 'Google Search', prompt: 'Google pe search karo AI news' },
-            { icon: <FileText size={11} />, label: 'Page summarize', prompt: 'Is page ko summarize karo' },
-            { icon: <ArrowDown size={11} />, label: 'Scroll down', prompt: 'Scroll down karo' },
-            { icon: <ShoppingCart size={11} />, label: 'Amazon pe dhundo', prompt: 'Amazon pe laptop dhundo' },
+            { icon: <Play size={11} />, label: 'Play Song Auto', prompt: 'Kesariya song bajao' },
+            { icon: <Globe size={11} />, label: 'WhatsApp Message', prompt: 'WhatsApp pe message karo Hello' },
+            { icon: <Search size={11} />, label: 'Click Button', prompt: 'Click on Login' },
+            { icon: <FileText size={11} />, label: 'Page Summarize', prompt: 'Is page ko summarize karo' },
+            { icon: <ArrowDown size={11} />, label: 'Scroll Down', prompt: 'Scroll down karo' },
+            { icon: <ShoppingCart size={11} />, label: 'Email Compose', prompt: 'Email compose karo Project Report' },
           ].map((pill) => (
             <button
               key={pill.label}

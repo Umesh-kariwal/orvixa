@@ -9,13 +9,9 @@ import {
   Download,
   AudioLines,
   Zap,
-  Globe,
-  Music,
-  Mail,
-  MessageSquare,
-  MapPin
+  Activity,
+  CheckCircle2
 } from 'lucide-react';
-import { openUrl } from '@/hooks/desktopActions';
 
 export const DashboardSidebar: React.FC = () => {
   const { 
@@ -31,7 +27,7 @@ export const DashboardSidebar: React.FC = () => {
     const text = conversationHistory
       .map((msg) => `${msg.role === 'user' ? 'Learner' : 'Orvixa'}: ${msg.text}`)
       .join('\n\n');
-    const blob = new Blob([text], { type: 'plain/text' });
+    const blob = new Blob([text], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -54,7 +50,7 @@ export const DashboardSidebar: React.FC = () => {
       height: '100%',
     }}>
 
-      {/* Widget 1: Extreme Desktop Automation Hub (Replaces old timer) */}
+      {/* Widget 1: Autonomous AI Agent Control Suite (Bugatti Agent Hub) */}
       <div style={{
         background: 'rgba(255,255,255,0.02)',
         border: '1px solid var(--border-color)',
@@ -66,52 +62,40 @@ export const DashboardSidebar: React.FC = () => {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--brand-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Zap size={13} /> Desktop Automation Hub
+            <Zap size={13} /> Autonomous AI Agent Suite
+          </span>
+          <span style={{
+            fontSize: '0.6rem', padding: '2px 8px', borderRadius: '12px',
+            background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.25)',
+            color: '#10b981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px'
+          }}>
+            <Activity size={10} /> LIVE AGENT
           </span>
         </div>
         
         <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
-          Voice or one-click control for your desktop apps & web apps:
+          Autonomous browser manipulation & voice-driven action engine:
         </span>
 
-        {/* Quick App Shortcuts Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+        {/* Agent Capabilities Status List */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
           {[
-            { label: 'YouTube', icon: <Globe size={13} style={{ color: '#ef4444' }} />, url: 'https://www.youtube.com' },
-            { label: 'Spotify', icon: <Music size={13} style={{ color: '#10b981' }} />, url: 'https://open.spotify.com' },
-            { label: 'WhatsApp', icon: <MessageSquare size={13} style={{ color: '#25d366' }} />, url: 'https://web.whatsapp.com' },
-            { label: 'Gmail', icon: <Mail size={13} style={{ color: '#ea4335' }} />, url: 'https://mail.google.com' },
-            { label: 'Google Maps', icon: <MapPin size={13} style={{ color: '#4285f4' }} />, url: 'https://maps.google.com' },
-            { label: 'ChatGPT', icon: <Zap size={13} style={{ color: '#10a37f' }} />, url: 'https://chat.openai.com' },
-          ].map((app) => (
-            <button
-              key={app.label}
-              onClick={() => openUrl(app.url)}
-              style={{
-                padding: '8px 10px',
-                borderRadius: '8px',
-                background: 'rgba(255, 255, 255, 0.02)',
-                border: '1px solid var(--border-color)',
-                color: 'var(--text-primary)',
-                fontSize: '0.7rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all var(--motion-fast) ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.1)';
-                e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.3)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.02)';
-                e.currentTarget.style.borderColor = 'var(--border-color)';
-              }}
-            >
-              {app.icon} {app.label}
-            </button>
+            { label: 'YouTube Video Auto-Play & Ad Skip', desc: 'Searches & clicks 1st video automatically' },
+            { label: 'Natural Language DOM Clicker', desc: 'Say "Click Login" or "Click Subscribe"' },
+            { label: 'Smart Web Input Auto-Filler', desc: 'Say "Type hello" into active web fields' },
+            { label: 'WhatsApp & Gmail Compose', desc: 'Direct message drafting via voice' },
+          ].map((item) => (
+            <div key={item.label} style={{
+              display: 'flex', gap: '8px', alignItems: 'flex-start',
+              padding: '6px 8px', borderRadius: '6px',
+              background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)'
+            }}>
+              <CheckCircle2 size={12} style={{ color: '#818cf8', flexShrink: 0, marginTop: '2px' }} />
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-primary)' }}>{item.label}</span>
+                <span style={{ fontSize: '0.58rem', color: 'var(--text-muted)' }}>{item.desc}</span>
+              </div>
+            </div>
           ))}
         </div>
       </div>

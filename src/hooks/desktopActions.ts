@@ -1,6 +1,6 @@
 /**
- * Orvixa Desktop Actions — Extreme Intelligence Automation Engine
- * Bridge between voice commands and Chrome Extension APIs / Web Protocols.
+ * Orvixa Desktop Actions — Real Autonomous Browser Agent Engine (Bugatti Engine)
+ * Translates natural voice intent into true DOM actions, script injection, and web app automation.
  */
 
 declare const chrome: any;
@@ -12,7 +12,7 @@ function bgMessage(msg: object): Promise<any> {
     if (!IS_EXTENSION) { resolve(null); return; }
     try {
       chrome.runtime.sendMessage(msg, (response: any) => {
-        chrome.runtime.lastError; // consume
+        chrome.runtime.lastError; // consume error safely
         resolve(response);
       });
     } catch {
@@ -51,7 +51,7 @@ export async function scrollPage(direction: 'down' | 'up'): Promise<void> {
   if (IS_EXTENSION) {
     await bgMessage({ type: 'ORVIXA_SCROLL', direction });
   } else {
-    window.scrollBy({ top: direction === 'down' ? 450 : -450, behavior: 'smooth' });
+    window.scrollBy({ top: direction === 'down' ? 500 : -500, behavior: 'smooth' });
   }
 }
 
@@ -64,7 +64,33 @@ export async function focusOrOpenSite(pattern: string, url: string): Promise<voi
 }
 
 // ─────────────────────────────────────────────────────────────
-// EXTENSIVE WEBSITE & WEB APP DIRECTORY
+// AUTONOMOUS AGENT DOM ACTION CALLS
+// ─────────────────────────────────────────────────────────────
+export async function autoPlayYouTubeVideo(songQuery: string): Promise<void> {
+  if (IS_EXTENSION) {
+    await bgMessage({ type: 'ORVIXA_AUTONOMOUS_YOUTUBE_PLAY', query: songQuery });
+  } else {
+    // Web fallback: search page
+    await openUrl(`https://www.youtube.com/results?search_query=${encodeURIComponent(songQuery)}`);
+  }
+}
+
+export async function autoClickElementByText(text: string): Promise<any> {
+  if (IS_EXTENSION) {
+    return await bgMessage({ type: 'ORVIXA_AUTO_CLICK_TEXT', text });
+  }
+  return { clicked: false };
+}
+
+export async function autoFillActiveInput(value: string): Promise<any> {
+  if (IS_EXTENSION) {
+    return await bgMessage({ type: 'ORVIXA_AUTO_FILL_INPUT', value });
+  }
+  return { filled: false };
+}
+
+// ─────────────────────────────────────────────────────────────
+// WEBSITE DIRECTORY
 // ─────────────────────────────────────────────────────────────
 export const WEBSITES: Record<string, { url: string; searchUrl?: string; label: string }> = {
   youtube: { url: 'https://www.youtube.com', searchUrl: 'https://www.youtube.com/results?search_query=', label: 'YouTube' },
@@ -99,6 +125,7 @@ export type ActionType =
   | 'open_site' | 'search_on_site' | 'play_on_youtube' | 'play_on_spotify'
   | 'whatsapp_msg' | 'email_compose' | 'maps_search'
   | 'google_search' | 'scroll_down' | 'scroll_up'
+  | 'click_text' | 'fill_input'
   | 'summarize_page' | 'read_page' | 'close_voice' | 'ai_chat';
 
 export interface VoiceAction {
@@ -117,7 +144,29 @@ export function parseVoiceCommand(text: string): VoiceAction {
     return { type: 'close_voice' };
   }
 
-  // ── 2. SCROLL CONTROL ─────────────────────────────────────
+  // ── 2. DOM CLICK BY TEXT ("click on login", "click search") ───────
+  const clickMatch = t.match(/(?:click|press|tap)\s+(?:on|the)?\s*(.+)/);
+  if (clickMatch && !t.includes('youtube') && !t.includes('spotify')) {
+    const target = clickMatch[1].trim();
+    return {
+      type: 'click_text',
+      query: target,
+      response: `Clicking "${target}" on active page!`,
+    };
+  }
+
+  // ── 3. DOM INPUT FILL ("fill hello world", "type hello") ──────────
+  const fillMatch = t.match(/(?:fill|type|write|input)\s+(.+)/);
+  if (fillMatch && !t.includes('whatsapp') && !t.includes('email') && !t.includes('search')) {
+    const value = fillMatch[1].trim();
+    return {
+      type: 'fill_input',
+      query: value,
+      response: `Typing "${value}" into active field!`,
+    };
+  }
+
+  // ── 4. SCROLL CONTROL ─────────────────────────────────────
   if (/\b(scroll down|neeche jao|aage jao|neeche scroll)\b/.test(t)) {
     return { type: 'scroll_down', response: 'Scrolling down!' };
   }
@@ -125,13 +174,12 @@ export function parseVoiceCommand(text: string): VoiceAction {
     return { type: 'scroll_up', response: 'Scrolling up!' };
   }
 
-  // ── 3. PAGE SUMMARIZATION ──────────────────────────────────
+  // ── 5. PAGE SUMMARIZATION ──────────────────────────────────
   if (/\b(is page ko summarize karo|summarize this|is page ki summary|page padho|read this page|explain this page)\b/.test(t)) {
     return { type: 'summarize_page', response: 'Analyzing page content...' };
   }
 
-  // ── 4. WHATSAPP DIRECT MESSAGE ────────────────────────────
-  // "whatsapp pe message bhejo hello", "whatsapp pe message karo hi"
+  // ── 6. WHATSAPP DIRECT MESSAGE ────────────────────────────
   const waMatch = t.match(/whatsapp\s+(?:pe|par|me|mein)\s+(?:message|msg)\s+(?:bhejo|karo|bhej)\s+(.+)/);
   if (waMatch) {
     const msg = waMatch[1].trim();
@@ -143,8 +191,7 @@ export function parseVoiceCommand(text: string): VoiceAction {
     };
   }
 
-  // ── 5. EMAIL COMPOSE ──────────────────────────────────────
-  // "email bhejo hello world", "mail compose karo hello", "email karo hello"
+  // ── 7. EMAIL COMPOSE ──────────────────────────────────────
   const mailMatch = t.match(/(?:email|mail)\s+(?:bhejo|compose karo|karo|bhej)\s+(.+)/);
   if (mailMatch) {
     const body = mailMatch[1].trim();
@@ -156,8 +203,7 @@ export function parseVoiceCommand(text: string): VoiceAction {
     };
   }
 
-  // ── 6. SPOTIFY PLAY / SEARCH ──────────────────────────────
-  // "spotify pe chaiyya chaiyya play karo", "spotify par song bajao"
+  // ── 8. SPOTIFY PLAY / SEARCH ──────────────────────────────
   const spotifyMatch = t.match(/spotify\s+(?:pe|par|me|mein)\s+(.+?)(?:\s+(?:play|bajao|chalao|search|laga))?$/);
   if (spotifyMatch) {
     const query = spotifyMatch[1].replace(/\b(play|bajao|chalao|search|laga)\b/g, '').trim();
@@ -171,8 +217,7 @@ export function parseVoiceCommand(text: string): VoiceAction {
     }
   }
 
-  // ── 7. GOOGLE MAPS SEARCH ─────────────────────────────────
-  // "maps pe Taj Mahal dhundo", "location dikhao Delhi"
+  // ── 9. GOOGLE MAPS SEARCH ─────────────────────────────────
   const mapsMatch = t.match(/(?:maps|map|location)\s+(?:pe|par|me|mein)?\s*(.+?)\s*(?:dhundo|dhoondo|dikhao|search)?$/);
   if (mapsMatch && (t.includes('map') || t.includes('location'))) {
     const place = mapsMatch[1].replace(/\b(dhundo|dhoondo|dikhao|search)\b/g, '').trim();
@@ -186,7 +231,7 @@ export function parseVoiceCommand(text: string): VoiceAction {
     }
   }
 
-  // ── 8. YOUTUBE PLAY ───────────────────────────────────────
+  // ── 10. YOUTUBE AUTONOMOUS VIDEO PLAY ──────────────────────
   const playPatterns = [
     /(?:play|baja(?:o)?|suna(?:o)?|chala(?:o)?|laga(?:o)?|gao?)\s+(.+)/,
     /(.+?)\s+(?:play karo|bajao|sunao|chalao|lagao|gaao?)\b/,
@@ -202,8 +247,7 @@ export function parseVoiceCommand(text: string): VoiceAction {
         return {
           type: 'play_on_youtube',
           query: song,
-          siteUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(song)}`,
-          response: `"${song}" YouTube par laga raha hoon!`,
+          response: `"${song}" YouTube par search aur auto-play kar raha hoon!`,
         };
       }
     }
@@ -213,13 +257,12 @@ export function parseVoiceCommand(text: string): VoiceAction {
   if (/\b(gaana|song|music|gana|playlist)\b/.test(t) && /\b(baja|chala|suna|play|laga|gao)\b/.test(t)) {
     return {
       type: 'play_on_youtube',
-      query: 'hindi songs',
-      siteUrl: 'https://www.youtube.com/results?search_query=best+hindi+songs+2024',
-      response: 'Aapke liye Hindi songs search aur play kar raha hoon!',
+      query: 'hindi songs 2024',
+      response: 'Aapke liye Hindi songs auto-play kar raha hoon!',
     };
   }
 
-  // ── 9. SEARCH ON SPECIFIC SITES ───────────────────────────
+  // ── 11. SEARCH ON SPECIFIC SITES ───────────────────────────
   for (const [siteName, siteInfo] of Object.entries(WEBSITES)) {
     if (t.includes(siteName) && siteInfo.searchUrl) {
       const searchRegex = new RegExp(
@@ -242,7 +285,7 @@ export function parseVoiceCommand(text: string): VoiceAction {
     }
   }
 
-  // ── 10. OPEN WEBSITE DIRECTORY ───────────────────────────
+  // ── 12. OPEN WEBSITES ────────────────────────────────────
   for (const [siteName, siteInfo] of Object.entries(WEBSITES)) {
     if (t.includes(siteName) && /\b(open|kholo|jao|visit|chalao|pe jao|par jao|launch|start)\b/.test(t)) {
       return {
@@ -254,7 +297,6 @@ export function parseVoiceCommand(text: string): VoiceAction {
     }
   }
 
-  // Direct site name matching
   for (const [siteName, siteInfo] of Object.entries(WEBSITES)) {
     if (t === siteName || t === `open ${siteName}` || t === `${siteName} kholo` || t === `${siteName} open`) {
       return {
@@ -266,7 +308,7 @@ export function parseVoiceCommand(text: string): VoiceAction {
     }
   }
 
-  // ── 11. GOOGLE SEARCH ─────────────────────────────────────
+  // ── 13. GOOGLE SEARCH ─────────────────────────────────────
   const googleSearchPatterns = [
     /(?:google\s+(?:pe|par|mein|me)\s+|google\s+karo\s+|search\s+for\s+|search\s+)(.+)/,
     /(.+?)\s+(?:google\s+(?:pe|par)|google\s+karo|search\s+karo)\b/,
@@ -291,8 +333,25 @@ export function parseVoiceCommand(text: string): VoiceAction {
 
 export async function executeVoiceAction(action: VoiceAction): Promise<string | null> {
   switch (action.type) {
-    case 'open_site':
     case 'play_on_youtube':
+      if (action.query) {
+        await autoPlayYouTubeVideo(action.query);
+      }
+      return action.response || null;
+
+    case 'click_text':
+      if (action.query) {
+        await autoClickElementByText(action.query);
+      }
+      return action.response || null;
+
+    case 'fill_input':
+      if (action.query) {
+        await autoFillActiveInput(action.query);
+      }
+      return action.response || null;
+
+    case 'open_site':
     case 'play_on_spotify':
     case 'whatsapp_msg':
     case 'email_compose':
