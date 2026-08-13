@@ -106,7 +106,8 @@ export async function autoPlayYouTubeVideo(songQuery: string): Promise<void> {
   if (IS_EXTENSION) {
     await bgMessage({ type: 'ORVIXA_AUTONOMOUS_YOUTUBE_PLAY', query: songQuery });
   } else {
-    await openUrl(`https://www.youtube.com/results?search_query=${encodeURIComponent(songQuery)}&sp=EgIQAQ%253D%253D`);
+    // Direct YouTube Embed Auto-Play URL (opens & auto-plays video directly without manual click!)
+    await openUrl(`https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(songQuery)}&autoplay=1`);
   }
 }
 
