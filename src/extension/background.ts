@@ -95,71 +95,86 @@ chrome.runtime.onMessage.addListener((request: any, _sender: any, sendResponse: 
   }
 
   // ─────────────────────────────────────────────────────────
-  // AUTONOMOUS AGENT: YouTube Search + Auto-Click 1st Video
-  // ─────────────────────────────────────────────────────────
-  // ─────────────────────────────────────────────────────────
   // AUTONOMOUS AGENT: YouTube Search + Auto-Play 1st Video
+  // Reuses existing YouTube tab if already open in Chrome!
   // ─────────────────────────────────────────────────────────
   if (request.type === 'ORVIXA_AUTONOMOUS_YOUTUBE_PLAY') {
-    // Filter &sp=EgIQAQ%253D%253D forces Video-only search results
     const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(request.query)}&sp=EgIQAQ%253D%253D`;
-    chrome.tabs.create({ url: searchUrl, active: true }, (tab: any) => {
-      
-      const injectAutoPlayScript = (tabId: number) => {
-        chrome.scripting.executeScript({
-          target: { tabId },
-          func: () => {
-            let attempts = 0;
-            const maxAttempts = 25; // Try for up to 7.5 seconds
-            
-            const checkAndPlay = () => {
-              attempts++;
-              // Robust YouTube selectors for video links
-              const videoLinks = Array.from(document.querySelectorAll(
-                'ytd-video-renderer a#video-title, a#video-title, ytd-search a[href^="/watch?v="], a.ytd-thumbnail[href^="/watch?v="]'
-              )) as HTMLAnchorElement[];
 
-              const targetLink = videoLinks.find(a => a.href && a.href.includes('/watch?v='));
+    const injectAutoPlayScript = (tabId: number) => {
+      chrome.scripting.executeScript({
+        target: { tabId },
+        func: () => {
+          let attempts = 0;
+          const maxAttempts = 30; // Polling up to 9 seconds
+          
+          const checkAndPlay = () => {
+            attempts++;
+            const videoLinks = Array.from(document.querySelectorAll(
+              'ytd-video-renderer a#video-title, a#video-title, ytd-search a[href^="/watch?v="], a.ytd-thumbnail[href^="/watch?v="]'
+            )) as HTMLAnchorElement[];
 
-              if (targetLink && targetLink.href) {
-                // Direct window navigation guarantees playing the video immediately!
-                window.location.href = targetLink.href;
-                return true;
-              }
+            const targetLink = videoLinks.find(a => a.href && a.href.includes('/watch?v='));
 
-              if (attempts < maxAttempts) {
-                setTimeout(checkAndPlay, 300);
-              }
-              return false;
-            };
-
-            // Start polling immediately
-            checkAndPlay();
-
-            // Also observe DOM mutations for dynamic SPA render
-            const observer = new MutationObserver(() => {
-              if (checkAndPlay()) {
-                observer.disconnect();
-              }
-            });
-            if (document.body) {
-              observer.observe(document.body, { childList: true, subtree: true });
+            if (targetLink && targetLink.href) {
+              window.location.href = targetLink.href;
+              return true;
             }
-          },
-        });
-      };
 
-      const listener = (tabId: number, changeInfo: any) => {
-        if (tabId === tab.id && (changeInfo.status === 'loading' || changeInfo.status === 'complete')) {
-          injectAutoPlayScript(tab.id);
-          if (changeInfo.status === 'complete') {
-            chrome.tabs.onUpdated.removeListener(listener);
+            if (attempts < maxAttempts) {
+              setTimeout(checkAndPlay, 300);
+            }
+            return false;
+          };
+
+          checkAndPlay();
+
+          const observer = new MutationObserver(() => {
+            if (checkAndPlay()) observer.disconnect();
+          });
+          if (document.body) {
+            observer.observe(document.body, { childList: true, subtree: true });
           }
-        }
-      };
-      chrome.tabs.onUpdated.addListener(listener);
+        },
+      });
+    };
 
-      sendResponse({ status: 'ok', tabId: tab.id });
+    // Check if YouTube is already open in ANY Chrome tab
+    chrome.tabs.query({ url: '*://*.youtube.com/*' }, (existingTabs: any[]) => {
+      if (existingTabs && existingTabs.length > 0) {
+        const existingTab = existingTabs[0];
+        // Focus existing YouTube tab
+        chrome.tabs.update(existingTab.id, { url: searchUrl, active: true }, (updatedTab: any) => {
+          chrome.windows.update(updatedTab.windowId, { focused: true });
+          
+          const listener = (tabId: number, changeInfo: any) => {
+            if (tabId === existingTab.id && (changeInfo.status === 'loading' || changeInfo.status === 'complete')) {
+              injectAutoPlayScript(tabId);
+              if (changeInfo.status === 'complete') {
+                chrome.tabs.onUpdated.removeListener(listener);
+              }
+            }
+          };
+          chrome.tabs.onUpdated.addListener(listener);
+          // Also inject immediately in case it's already loading
+          injectAutoPlayScript(existingTab.id);
+        });
+        sendResponse({ status: 'ok', tabId: existingTab.id });
+      } else {
+        // No YouTube tab open — create new tab
+        chrome.tabs.create({ url: searchUrl, active: true }, (tab: any) => {
+          const listener = (tabId: number, changeInfo: any) => {
+            if (tabId === tab.id && (changeInfo.status === 'loading' || changeInfo.status === 'complete')) {
+              injectAutoPlayScript(tab.id);
+              if (changeInfo.status === 'complete') {
+                chrome.tabs.onUpdated.removeListener(listener);
+              }
+            }
+          };
+          chrome.tabs.onUpdated.addListener(listener);
+          sendResponse({ status: 'ok', tabId: tab.id });
+        });
+      }
     });
     return true;
   }
