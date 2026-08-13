@@ -142,8 +142,13 @@ export const VoiceOverlay: React.FC = () => {
     const last = conversationHistory[conversationHistory.length - 1];
     if (last?.role === 'assistant') {
       const raw = last.text || '';
-      const sentences = raw.match(/[^.!?\n]+[.!?\n]+/g) || [raw];
-      const voiceText = sentences.slice(0, 2).join(' ').trim() || raw.slice(0, 250);
+      const clean = raw
+        .replace(/```[\s\S]*?```/g, '')
+        .replace(/`[^`]+`/g, '')
+        .replace(/\[IMAGE:.*?\]/g, '')
+        .replace(/[*#_\\]/g, '')
+        .trim();
+      const voiceText = clean.length > 500 ? clean.slice(0, 480) + '...' : clean;
       setLastAiResponse(voiceText);
       speakText(raw.includes('Error:') ? 'Kuch issue aa gaya, dobara try karo.' : voiceText);
     }

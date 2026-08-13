@@ -108,11 +108,10 @@ export const useVoice = () => {
     // For standard voice responses, use instant local Browser SpeechSynthesis (0ms network delay!)
     if (!isSinging) {
       const voice = selectBestVoice(voiceLanguage);
-      const sentences = clean.match(/[^.!?\n]+[.!?\n]+/g) || [clean];
-      const shortText = sentences.slice(0, 2).join(' ').trim();
+      const textToSpeak = clean.length > 500 ? clean.slice(0, 480) + '...' : clean;
 
       window.speechSynthesis?.cancel();
-      const u = new SpeechSynthesisUtterance(shortText || clean.slice(0, 250));
+      const u = new SpeechSynthesisUtterance(textToSpeak);
       u.lang = voiceLanguage;
       u.pitch = 1.0;  // 100% natural human pitch
       u.rate = 1.0;   // 100% natural human speaking rate
@@ -191,14 +190,13 @@ export const useVoice = () => {
     // Browser TTS fallback
     if (!usedGemini && sessionIdRef.current === mySession) {
       const voice = selectBestVoice(voiceLanguage);
-      const sentences = clean.match(/[^.!?\n]+[.!?\n]+/g) || [clean];
-      const shortText = sentences.slice(0, 2).join(' ').trim();
+      const textToSpeak = clean.length > 500 ? clean.slice(0, 480) + '...' : clean;
 
       window.speechSynthesis?.cancel();
-      const u = new SpeechSynthesisUtterance(shortText || clean.slice(0, 250));
+      const u = new SpeechSynthesisUtterance(textToSpeak);
       u.lang = voiceLanguage;
-      u.pitch = 1.08;
-      u.rate = 1.05;
+      u.pitch = 1.0;
+      u.rate = 1.0;
       if (voice) u.voice = voice;
       u.onstart = () => { if (sessionIdRef.current === mySession) setIsSpeaking(true); };
       u.onend = () => { if (sessionIdRef.current === mySession) setIsSpeaking(false); };

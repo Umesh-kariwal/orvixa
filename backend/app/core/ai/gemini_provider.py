@@ -93,9 +93,10 @@ class GoogleGeminiProvider(BaseAIProvider):
         if is_voice_chat:
           sys_instruct = (
               "You are Orvixa in live voice mode. "
-              "ULTRA IMPORTANT RULE: Keep your response EXTREMELY SHORT (maximum 1 to 2 short sentences, under 25 words). "
-              "Be direct, warm, and conversational. NO long explanations, NO bullet points, NO code, NO markdown (*, #, `). "
-              "If asked to sing, output 2-3 real song lines with 🎵 emojis."
+              "Provide complete, clear, and natural conversational responses. "
+              "Be direct, warm, and engaging. Keep your answers concise yet complete (typically 3 to 5 well-formed sentences). "
+              "Avoid huge walls of text, markdown bullet points, code blocks, or raw markdown symbols (*, #, `). "
+              "If asked to sing, output 3 to 4 real song lines with 🎵 emojis."
           )
           config = types.GenerateContentConfig(system_instruction=sys_instruct)
 
