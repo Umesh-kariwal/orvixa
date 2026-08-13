@@ -82,8 +82,8 @@ export async function autoPlayYouTubeVideo(songQuery: string): Promise<void> {
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data) && data[0]?.videoId) {
-        // Direct YouTube Watch Video Page (Auto-plays on YouTube!)
-        await openUrl(`https://www.youtube.com/watch?v=${data[0].videoId}`);
+        // Direct YouTube Watch Video Page with Autoplay enabled
+        await openUrl(`https://www.youtube.com/watch?v=${data[0].videoId}&autoplay=1`);
         return;
       }
     }
@@ -99,7 +99,7 @@ export async function autoPlayYouTubeVideo(songQuery: string): Promise<void> {
       const item = data2?.items?.[0];
       if (item && item.url) {
         const vidId = item.url.replace('/watch?v=', '');
-        await openUrl(`https://www.youtube.com/watch?v=${vidId}`);
+        await openUrl(`https://www.youtube.com/watch?v=${vidId}&autoplay=1`);
         return;
       }
     }
