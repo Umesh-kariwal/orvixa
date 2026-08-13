@@ -69,7 +69,44 @@ export function triggerMediaControl(action: 'next' | 'previous' | 'pause' | 'pla
 }
 
 export async function autoPlayYouTubeVideo(songQuery: string): Promise<void> {
-  await openUrl(`https://www.youtube.com/results?search_query=${encodeURIComponent(songQuery)}&sp=EgIQAQ%253D%253D`);
+  const q = songQuery.trim();
+  if (!q) return;
+
+  // 1. Intelligent Direct Video ID Resolver via HTML Proxy
+  try {
+    const rawRes = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(`https://www.youtube.com/results?search_query=${encodeURIComponent(q)}&sp=EgIQAQ%3D%3D`)}`);
+    if (rawRes.ok) {
+      const html = await rawRes.text();
+      const matches = html.match(/\/watch\?v=([a-zA-Z0-9_-]{11})/);
+      if (matches && matches[1]) {
+        const vidId = matches[1];
+        // Opens exact YouTube Watch Video URL (Auto-plays video on YouTube with zero manual clicks!)
+        await openUrl(`https://www.youtube.com/watch?v=${vidId}`);
+        return;
+      }
+    }
+  } catch {
+    // fallback
+  }
+
+  // 2. Secondary Piped API Resolver
+  try {
+    const res2 = await fetch(`https://pipedapi.kavin.rocks/search?q=${encodeURIComponent(q)}&filter=music_songs`);
+    if (res2.ok) {
+      const data2 = await res2.json();
+      const item = data2?.items?.[0];
+      if (item && item.url) {
+        const vidId = item.url.replace('/watch?v=', '');
+        await openUrl(`https://www.youtube.com/watch?v=${vidId}`);
+        return;
+      }
+    }
+  } catch {
+    // fallback
+  }
+
+  // 3. Fallback to Video-filtered search page
+  await openUrl(`https://www.youtube.com/results?search_query=${encodeURIComponent(q)}&sp=EgIQAQ%253D%253D`);
 }
 
 export async function autoClickElementByText(text: string): Promise<any> {
