@@ -462,7 +462,7 @@ export async function executeVoiceAction(action: VoiceAction): Promise<string | 
       return action.response || null;
 
     case 'play_on_youtube':
-      if (action.query) {
+      if (IS_EXTENSION && action.query) {
         await autoPlayYouTubeVideo(action.query);
       }
       return action.response || null;
