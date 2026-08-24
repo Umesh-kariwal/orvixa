@@ -7,6 +7,7 @@ import {
   parseVoiceCommand, executeVoiceAction, getCurrentPageContent,
   buildAutonomousPlan, executeAutonomousPlan, type AutonomousTaskPlan
 } from '@/hooks/desktopActions';
+import { fetchLLMAgentPlan, executeAgentPlan } from '@/services/agentOrchestrator';
 
 // ─────────────────────────────────────────────────────────────
 // PRO AUDIO EQUALIZER BARS (Visualizer component)
@@ -79,7 +80,21 @@ export const VoiceOverlay: React.FC = () => {
     submittedRef.current = true;
     setVoiceState('thinking');
 
-    // Check for Multi-Step Autonomous Agent Plan
+    // 1. Try SOTA Dynamic Backend LLM Agent Plan
+    const llmPlan = await fetchLLMAgentPlan(text);
+    if (llmPlan) {
+      setLastAiResponse('');
+      setActiveAutonomousPlan(llmPlan as any);
+      speakText(`Agent initiating task: ${llmPlan.goal}`);
+      const summary = await executeAgentPlan(llmPlan, (updated) => {
+        setActiveAutonomousPlan({ ...updated } as any);
+      });
+      setStatusBadge(summary);
+      speakText(summary);
+      return;
+    }
+
+    // 2. Check for Multi-Step Local Autonomous Agent Plan
     const plan = buildAutonomousPlan(text);
     if (plan) {
       setLastAiResponse('');

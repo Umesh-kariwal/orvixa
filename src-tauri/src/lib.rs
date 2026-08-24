@@ -68,6 +68,33 @@ fn open_system_folder(folder_path: String) -> Result<String, String> {
     }
 }
 
+#[tauri::command]
+fn execute_synthetic_mouse_click(x: i32, y: i32) -> Result<String, String> {
+    let ps_code = format!(
+        "[System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point({}, {}); Add-Type -MemberDefinition '[DllImport(\"user32.dll\")] public static extern void mouse_event(int flags, int dx, int dy, int cButtons, int dwExtraInfo);' -Name 'User32' -Namespace 'Win32'; [Win32.User32]::mouse_event(0x0002 -bor 0x0004, 0, 0, 0, 0)",
+        x, y
+    );
+
+    match Command::new("powershell").args(["-NoProfile", "-Command", &ps_code]).spawn() {
+        Ok(_) => Ok(format!("Clicked coordinates ({}, {})", x, y)),
+        Err(e) => Err(format!("Failed to execute click: {}", e)),
+    }
+}
+
+#[tauri::command]
+fn execute_synthetic_key_sequence(text: String) -> Result<String, String> {
+    let escaped_text = text.replace("'", "''");
+    let ps_code = format!(
+        "$wshell = New-Object -ComObject wscript.shell; $wshell.SendKeys('{}')",
+        escaped_text
+    );
+
+    match Command::new("powershell").args(["-NoProfile", "-Command", &ps_code]).spawn() {
+        Ok(_) => Ok(format!("Typed sequence: {}", text)),
+        Err(e) => Err(format!("Failed to type sequence: {}", e)),
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
@@ -76,7 +103,9 @@ pub fn run() {
         open_system_uri,
         send_system_media_key,
         lock_windows_screen,
-        open_system_folder
+        open_system_folder,
+        execute_synthetic_mouse_click,
+        execute_synthetic_key_sequence
     ])
     .plugin(
       tauri_plugin_global_shortcut::Builder::new()
