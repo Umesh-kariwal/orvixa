@@ -54,12 +54,22 @@ async def get_diagnostics(current_settings: Settings = Depends(get_settings)):
         try:
             # Run active dry-run generate_content test against Google servers
             client = genai.Client(api_key=key)
-            response = client.models.generate_content(
-                model=current_settings.GEMINI_MODEL or "gemini-3.6-flash",
-                contents="test connection"
-            )
-            if response.text:
-                key_valid = True
+            models_to_test = [current_settings.GEMINI_MODEL, "gemini-1.5-flash", "gemini-1.5-pro"]
+            for m in models_to_test:
+                try:
+                    response = client.models.generate_content(
+                        model=m,
+                        contents="test connection"
+                    )
+                    if response.text:
+                        key_valid = True
+                        error_msg = None
+                        break
+                except Exception as ex:
+                    error_msg = str(ex)
+                    if "404" in str(ex) or "available" in str(ex).lower():
+                        continue
+                    break
         except Exception as e:
             error_msg = str(e)
             

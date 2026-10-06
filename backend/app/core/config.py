@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     
     # AI Engine Configuration
     AI_GEMINI_API_KEY: Optional[str] = Field(default=None, description="Google Gemini API Key")
-    GEMINI_MODEL: str = Field(default="gemini-2.0-flash", description="Default Gemini model name")
+    GEMINI_MODEL: str = Field(default="gemini-1.5-flash", description="Default Gemini model name")
     NVIDIA_API_KEY: Optional[str] = Field(default=None, description="NVIDIA API Key")
 
     # CORS Configuration
