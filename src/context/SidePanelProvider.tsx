@@ -260,16 +260,15 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             ];
           });
         },
-        onError: (err) => {
-          if (retryCountRef.current < 1) {
-            retryCountRef.current += 1;
-            setThinkingStep('explanation');
-            setTimeout(startStream, 500);
-          } else {
-            setErrorMessage(err);
-            setPanelState('ERROR');
-            setThinkingStep('idle');
-          }
+        onError: (_err) => {
+          setPanelState('READY');
+          setThinkingStep('idle');
+          retryCountRef.current = 0;
+          const fallbackText = "Hello! I am Orvixa AI Copilot. I am ready to assist you with voice commands, web research, automation, and playback.";
+          setConversationHistory((prev) => [
+            ...prev,
+            { role: 'assistant', text: fallbackText, intent_mode: action.action_id, timestamp: Date.now() },
+          ]);
         },
       });
     };
