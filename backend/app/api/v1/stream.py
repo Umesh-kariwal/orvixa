@@ -59,12 +59,11 @@ async def stream_intent(payload: StreamRequestSchema, request: Request):
                 detail="Security Alert: Malicious prompt injection pattern blocked."
             )
 
-    provider = AIProviderRegistry.resolve_provider(payload.provider_hint)
-
     async def sse_generator():
         request_cancel_id = payload.context_id
 
         try:
+            provider = AIProviderRegistry.resolve_provider(payload.provider_hint)
             # Pass conversation history and optional custom API key down to stream generator
             async for chunk in provider.stream_intent(
                 context_payload=payload.context_payload,
