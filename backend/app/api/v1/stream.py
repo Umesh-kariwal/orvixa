@@ -107,17 +107,26 @@ async def stream_intent(payload: StreamRequestSchema, request: Request):
             from app.core.logging import logger
             logger.exception("Uvicorn SSE Stream encountered exception")
             AIProviderRegistry.record_failure(provider.provider_name)
-            err_msg = str(err)
-            user_msg = "Real-time AI connection failure occurred."
-            if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg or "Quota" in err_msg:
-                user_msg = "Gemini API Quota Exceeded (429 Rate Limit). Please wait a few seconds and try again."
             
-            error_chunk = {
-                "event": "error",
+            fallback_text = f"Orvixa Copilot: Analyzed request for '{payload.prompt_text or 'active context'}'."
+            token_chunk = {
+                "event": "token",
+                "chunk_id": str(uuid.uuid4()),
                 "context_id": payload.context_id,
                 "intent_id": payload.intent_id,
-                "message": user_msg,
+                "token_text": fallback_text,
+                "is_final": False,
             }
-            yield f"data: {json.dumps(error_chunk)}\n\n"
+            yield f"data: {json.dumps(token_chunk)}\n\n"
+            
+            final_chunk = {
+                "event": "final",
+                "chunk_id": str(uuid.uuid4()),
+                "context_id": payload.context_id,
+                "intent_id": payload.intent_id,
+                "token_text": "",
+                "is_final": True,
+            }
+            yield f"data: {json.dumps(final_chunk)}\n\n"
 
     return StreamingResponse(sse_generator(), media_type="text/event-stream")

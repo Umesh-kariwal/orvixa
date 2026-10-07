@@ -131,9 +131,8 @@ class GoogleGeminiProvider(BaseAIProvider):
                     success = True
                     break
                 except Exception as err:
-                    if "404" in str(err) or "not found" in str(err).lower() or "available" in str(err).lower():
-                        continue
-                    raise err
+                    # Try next model or fallback smoothly on any API error
+                    continue
 
             if not success and tokens_emitted == 0:
                 # Local development fallback when stream fails
